@@ -1,0 +1,3 @@
+C:/Users/adama/OneDrive/Dokumenter/GitHub/CPP_Template/build/CMakeFiles/CPP_TEMPLATE.dir
+C:/Users/adama/OneDrive/Dokumenter/GitHub/CPP_Template/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/adama/OneDrive/Dokumenter/GitHub/CPP_Template/build/CMakeFiles/ZERO_CHECK.dir
