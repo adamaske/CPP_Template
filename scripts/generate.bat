@@ -1,6 +1,9 @@
 @echo off
 
 pushd ..
-call cmake to generate project files
+mkdir build
+cd build
+cmake ..
+cmake --build . 
 popd
 pause
