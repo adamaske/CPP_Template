@@ -1,6 +1,8 @@
 #pragma once
 
-
+#include <queue>
+#include <mutex>
+#include "Endpoint.h"
 
 class Networking{
     private:
@@ -12,7 +14,6 @@ class Networking{
 
     static bool Intialize();
     static void Shutdown();
-    static void TestNetwork();
 
-    int ForFun();
 };
+

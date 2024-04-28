@@ -1,8 +1,11 @@
 #pragma once
+#define WIN32_LEAN_AND_MEAN
+#include "WinSock2.h"
+#include <WS2tcpip.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
-#include <WS2tcpip.h>
 
 struct IPEndpoint {
 	std::string hostname = "";
@@ -46,6 +49,16 @@ struct IPEndpoint {
 		memcpy(&ip_bytes[0], &ip_long, sizeof(ULONG));
 
 		freeaddrinfo(hostinfo); // free linked list
+	}
+
+	IPEndpoint(sockaddr* addr) {
+		sockaddr_in* _addr = reinterpret_cast<sockaddr_in*>(addr);
+		port = _addr->sin_port;//ntohs(_addr->sin_port);//little to big endian
+		ip_bytes.resize(sizeof(ULONG));
+		memcpy(&ip_bytes[0], &_addr->sin_addr, sizeof(ULONG));
+		ip_string.resize(16);
+		inet_ntop(AF_INET, &_addr->sin_addr, &ip_string[0], 16);
+		hostname = ip_string;
 	}
 
 	sockaddr_in GetSockaddr() {

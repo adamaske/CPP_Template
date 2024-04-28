@@ -46,7 +46,9 @@ Only IPv4 is supported.
 Implemented : Basic TCP server
 To do: 
 For simple and generic functionality : Encapsulate the blocking server in a thread and add received data to a mutexed queue 
+- Server
 
+- Client
 
 ## Graphics
 
