@@ -32,5 +32,6 @@ int main(int argc, char* argv[]){
     Networking::TestNetwork();
     
     Networking::Shutdown();
+    std::cout << "Closed application...\n";
     return 0;
 }

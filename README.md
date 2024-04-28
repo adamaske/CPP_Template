@@ -28,7 +28,8 @@ cmake --build .
 ```
 
 ## Configuration
-Make it your own by configuring it!
+Make it your own by configuring it.
+
 CMakeLists.txt : `project(YOUR_PROJECT_NAME_HERE)`
 src/config.h.in :
 `#define YOUR_PROJECT_NAME_VERSION_MAJOR @YOUR_PROJECT_NAME_VERSION_MAJOR@` and
@@ -41,6 +42,7 @@ Several static libaries are implemented in deps/.
 
 ## Networking
 Networking is a static library. 
+Only IPv4 is supported.
 Implemented : Basic TCP server
 To do: 
 For simple and generic functionality : Encapsulate the blocking server in a thread and add received data to a mutexed queue 

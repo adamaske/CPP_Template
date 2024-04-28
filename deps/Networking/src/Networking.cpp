@@ -10,6 +10,9 @@
 #include "Server.h"
 #include "Client.h"
 #include "Socket.h"
+#include "Endpoint.h"
+
+#include <thread>
 Networking::Networking(){
     std::cout << "Networking Constructed\n";
 }
@@ -46,18 +49,42 @@ void Networking::Shutdown()
 void Networking::TestNetwork() {
     int result = 0;
 
+    IPEndpoint endpoint("localhost", 12790);
+    endpoint.PrintEndpoint();
+
     Socket sock;
     result = sock.Create();
     if (result != 1) {
         std::cout << "Socket failed creation\n";
     }
+    result = sock.Listen(endpoint, 5);
+    if (result != 1) {
+        std::cout << "Socket failed listening\n";
+    }
+    std::cout << "Socket listening on " << endpoint.ShortDesc() << "\n";
 
+    Socket fake_connection;
+    fake_connection.Create();
+    std::thread fake_conn_thread(&Socket::Connect, &fake_connection, IPEndpoint("localhost", 12790));
 
+    //It is currently connection
+    Socket connection;
+    result = sock.Accept(connection);
+    if (result != 1) {
+        std::cout << "No connection accepted\n";
+    }
+    else {
+        std::cout << "Connection established\n";
 
-    Server server;
-    Client client;
-
+        system("pause");
+        connection.Close();
+    }
+    
+    fake_conn_thread.join();
     result = sock.Close();
+    if (result != 1) {
+        std::cout << "Socket failed closing\n";
+    }  
 }
 int Networking::ForFun() {
     // IP Address is an address that can be used to identify a machine to interact with
