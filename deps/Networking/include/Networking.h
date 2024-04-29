@@ -1,9 +1,5 @@
 #pragma once
 
-#include <queue>
-#include <mutex>
-#include "Endpoint.h"
-
 class Networking{
     private:
 

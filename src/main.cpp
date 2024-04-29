@@ -22,10 +22,6 @@ int parse_callback(char buffer[10]) {
 
 int main(int argc, char* argv[]){
     std::cout << "Template VERSION " << Template_VERSION_MAJOR << "." << Template_VERSION_MINOR << "\n";
-    int result = Networking::Intialize();
-    if (result != 1) {
-        std::cout << "Network failed intilizing Winsock\n";
-    }
 
 #pragma region Templated Parsing Server
     if (false) {
@@ -42,16 +38,26 @@ int main(int argc, char* argv[]){
     }
 #pragma endregion
 
-    Server server;
-    std::thread server_thread(&Server::RunThreadedServer, &server, IPEndpoint("localhost", 8000));
+    Networking::Intialize();
 
+    Server server;
+    server.Initialize(IPEndpoint("localhost", 8000));
+
+    bool client_run = false;
 
     Client client;
-    std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000));
 
-    server_thread.join();
-    client_thread.join();
-
+    std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
+    std::thread server_thread(&Server::Run, &server);
+    while (true) {
+        std::string user = "";
+        std::getline(std::cin, user);
+        if (user == "s") {
+            client_run = !client_run;
+        }
+    }
+    //client_thread.join();
+    
     Networking::Shutdown();
     std::cout << "Closed application...\n";
     return 0;

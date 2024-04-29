@@ -11,8 +11,9 @@ struct IPEndpoint {
 	std::string hostname = "";
 	std::string ip_string = "";
 	std::vector<uint8_t> ip_bytes;
-	unsigned short port;
-
+	unsigned short port = 0;
+	IPEndpoint() {
+	};
 	IPEndpoint(const char* ip, unsigned short _port) {
 		port = _port;
 

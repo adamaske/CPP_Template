@@ -3,8 +3,7 @@
 #include <winsock.h>
 #include <vector>
 #include <string>
-
-#include "NetworkInfo.h"
+#include "Constants.h"
 
 enum PacketType {
 	Invalid, 
@@ -53,7 +52,7 @@ public:
 	}
 
 	void Append(const void* data, uint32_t size) {
-		if (buffer.size() + size > max_packet) {
+		if (buffer.size() + size > max_packet_size) {
 			throw PacketExecption("[Packet::Append(const void*, uint32_t)] - Packet size exceeded max_packet.");
 		}
 		buffer.insert(buffer.end(), (char*)data, (char*)data + size);

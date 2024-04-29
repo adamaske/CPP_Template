@@ -6,18 +6,18 @@
 class Packet;
 
 enum SocketOption{ TCP_NoDelay };
-class Socket {
+class IPSocket {
 public:
-	Socket();
-	Socket(SOCKET sock);
-	~Socket();
+	IPSocket();
+	IPSocket(SOCKET sock);
+	~IPSocket();
 
 	int Create();
 	int Close();
 
 	int Bind(IPEndpoint endpoint);
 	int Listen(IPEndpoint endpoint, int backlog = 5);
-	int Accept(Socket& out);
+	int Accept(IPSocket& out_socket, IPEndpoint* out_endpoint = nullptr);
 
 	int Connect(IPEndpoint endpoint);
 
@@ -29,7 +29,13 @@ public:
 
 	int Send(Packet& packet);
 	int Recv(Packet& packet);
+
+	int SetBlocking(bool blocking);
 	int SetSocketOption(SocketOption opt, BOOL value);
+
+	SOCKET GetSocket() {
+		return ip_socket;
+	}
 private:
 	SOCKET ip_socket = INVALID_SOCKET;
 };

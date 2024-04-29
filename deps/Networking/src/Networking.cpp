@@ -29,6 +29,7 @@ bool Networking::Intialize()
     err = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (err != 0) {
         std::cout << "WSAStartup Failed : " << err << "\n";
+        WSACleanup();
         return 0;
     }
 

@@ -1,8 +1,9 @@
 #pragma once
-#include "Endpoint.h"
-
 #include <mutex>
 #include <vector>
+#include "TCPConnection.h"
+#include "Endpoint.h"
+
 class Server {
 private:
 
@@ -10,8 +11,25 @@ private:
 public:
 	Server();
 	~Server();
+	//Listen to endpoint and accept connections
+	int Initialize(IPEndpoint endpoint);
 
-	int RunThreadedServer(IPEndpoint endpoint);
+	//One server tick
+	int Frame();
+
+	int CheckForPollErrors(SHORT revent);
+	int AcceptConnections(WSAPOLLFD listening_fd);
+	int CloseConnection(int idx, std::string reason);
+
+	int ProcessPacket(Packet& packet);
+
+	int Run();
+public:
+	IPSocket listen_socket;
+
+	std::vector<TCPConnection> connections;
+	std::vector<WSAPOLLFD> master_fd; 
+	std::vector<WSAPOLLFD> use_fd;
 };
 
 template<typename StorageType, typename CallbackType, typename BufferType,int BufferSize>
