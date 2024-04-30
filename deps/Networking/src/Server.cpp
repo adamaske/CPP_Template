@@ -29,7 +29,7 @@ int Server::Initialize(IPEndpoint endpoint) {
 		return NETWORK_ERROR;
 	}
 
-	listen_socket.SetBlocking(true);
+	listen_socket.SetBlocking(false);
 	result = listen_socket.Listen(endpoint);
 	if (result != NETWORK_SUCCESS) {
 		std::cout << "Server : Failed listening... " << __FILE__ << ", line " << __LINE__ << "\n";
@@ -48,189 +48,48 @@ int Server::Initialize(IPEndpoint endpoint) {
 }
 
 int Server::Frame() {
-
-	//How does this work ?
-	PollListener();
-	PollConnections();
-
-
-	//TODO : This is such a horrible function i am loosing my mind
-	use_fd = master_fd;//Keep revents clean by using a copy
-	use_fd.emplace_back(listen_fd);
-
 	std::vector<WSAPOLLFD> fds = { listen_fd, };
 	for (auto& connection : as) {
 		fds.push_back(connection.fd);
 	}
 
-	int poll = WSAPoll(fds.data(), fds.size(), 1); //POLL
-	int poll = WSAPoll(use_fd.data(), use_fd.size(), 1);
+	int poll = WSAPoll(fds.data(), fds.size(), 1); //
 
 	if (poll == SOCKET_ERROR) {
 		std::cout << "Server : Poll error : " << WSAGetLastError() << "\n";
 		return 0;
 	}
 	if (poll == 0) { //Nothing to poll
+		std::cout << "Server : No poll results\n";
 		return 1;
 	}
+;
+	int accepted = AcceptConnections(listen_fd); // Listening
+	listen_fd.revents = 0;
 
-	WSAPOLLFD lfd = use_fd[0];
-	int accepted = AcceptConnections(lfd); // Check listener for incoming connection requests
-	
-	for (auto& connection : as) {
-		int result = ServiceConnection(connection.tcp, connection.fd);
-		if (result == 0) {
-			//Close
+	std::vector<int> to_disconnect = {};
+	for (int i = 0; i < as.size(); i++) {
+
+		TCPConnection& tcp = as[i].tcp;
+		WSAPOLLFD& fd = as[i].fd;
+
+		std::pair<int, std::string> result = ServiceConnection(tcp, fd);
+		if (result.first == 0) {
+			to_disconnect.push_back(i);
+			std::cout << "Server : Service failed " << result.second << "\n";
 			continue;
 		}
 
-		//Reset connection
-		connection.fd.revents = 0;
+		fd.revents = 0; // Clear revents
 	}
 
-	std::vector<int> to_drop;
-
-	for (int i = use_fd.size() - 1; i >= 1; i--) {//Backwards to avoid decrementing durin closing connections
-
-		//int result = ServiceConnection(connections[i - 1], use_fd[i]);
-		int result = 0;
-		int connection_idx = i - 1;
-		TCPConnection& connection = connections[connection_idx];
-		PacketManager& pm_write = connection.pm_write;
-		PacketManager& pm_read = connection.pm_read;
-
-		if (result == 0) {
-			CloseConnection(connection_idx, std::string("Service Failed"));
-		}
-
-		if (use_fd[i].revents & POLLERR) {//Nothing to read
-			CloseConnection(connection_idx, "POLLERR");
-			continue;
-		}
-		if (use_fd[i].revents & POLLHUP) {//Nothing to read
-			CloseConnection(connection_idx, "POLLHUP");
-			continue;
-		}
-		if (use_fd[i].revents & POLLNVAL) {//Nothing to read
-			CloseConnection(connection_idx, "POLLNVAL");
-			continue;
-		}
-
-		if (use_fd[i].revents & POLLRDNORM) {//Can we non-blocking read ?
-			//read data
-			auto pm = pm_read;
-
-			int bytes_recieved = 0;
-
-			if (pm.current_task == PacketManagerTask::ProcessPacketSize) {
-				//If this by chance only sends one of two bytes from uint16-> extraction offset will take care of it. 
-				bytes_recieved = recv(use_fd[i].fd,
-					(char*)&pm.current_packet_size + pm.current_packet_extraction_offset,
-					sizeof(uint16_t) - pm.current_packet_extraction_offset,
-					0);
-			}
-			else if (pm.current_task == PacketManagerTask::ProcessPacketContents) {
-				bytes_recieved = recv(use_fd[i].fd,
-					(char*)&connection.buffer + pm.current_packet_extraction_offset,
-					pm.current_packet_size - pm.current_packet_extraction_offset,
-					0);
-			}
-
-
-			if (bytes_recieved == 0) {
-				CloseConnection(connection_idx, "0 bytes received");
-				continue;
-			}
-			if (bytes_recieved == SOCKET_ERROR) {
-				int error = WSAGetLastError();
-				if (error != WSAEWOULDBLOCK) {//Close connection unless blocking-error
-					CloseConnection(connection_idx, "Wouldblock error");
-					continue;
-				}
-			}
-			if (bytes_recieved < -1) {
-				CloseConnection(connection_idx, "-" + std::to_string(bytes_recieved) + " bytes received");
-				continue;
-			}
-
-			pm.current_packet_extraction_offset += bytes_recieved;
-
-			if (pm.current_task == PacketManagerTask::ProcessPacketSize) {
-				if (pm.current_packet_extraction_offset == sizeof(uint16_t)) {
-					pm.current_packet_size = ntohs(pm.current_packet_size);
-					if (pm.current_packet_size > max_packet_size) {
-						CloseConnection(connection_idx, "Packet size too large");
-						continue;
-					}
-
-					pm.current_packet_extraction_offset = 0;
-					pm.current_task = PacketManagerTask::ProcessPacketContents;
-				}
-			}
-			else if (pm.current_task == PacketManagerTask::ProcessPacketContents) {
-
-				std::shared_ptr<Packet> packet = std::make_shared<Packet>();
-				packet->buffer.resize(pm.current_packet_size);
-				memcpy(&packet->buffer[0], connection.buffer, pm.current_packet_size);
-
-				pm.Append(packet);
-
-				pm.current_packet_size = 0;
-				pm.current_packet_extraction_offset = 0;
-				pm.current_task = PacketManagerTask::ProcessPacketSize;
-			}
-		}
-
-		if (use_fd[i].revents & POLLWRNORM) {//Can we non-blocking write ? 
-			//write data
-			auto pm = pm_write;
-			while (pm_write.HasPendingPackets()) {
-				if (pm_write.current_task == PacketManagerTask::ProcessPacketSize) {
-					pm_write.current_packet_size = pm.Retrieve()->buffer.size();
-					uint16_t big_endian_packet_size = htons(pm_write.current_packet_size);
-					int bytes_sent = send(use_fd[i].fd, 
-											(char*)&big_endian_packet_size + pm.current_packet_extraction_offset, 
-											sizeof(uint16_t) - pm.current_packet_extraction_offset, 
-											0);
-					if (bytes_sent > 0) {
-						pm.current_packet_extraction_offset += bytes_sent;
-					}
-
-					if (pm.current_packet_extraction_offset == sizeof(uint16_t)){
-						pm.current_packet_extraction_offset = 0;
-						pm.current_task = PacketManagerTask::ProcessPacketContents;
-					}
-					else {
-						break; //avoid sending half because of blocking
-					}
-
-				}
-				else if (pm_write.current_task == PacketManagerTask::ProcessPacketContents) {
-					char* buffer_ptr = &pm.Retrieve()->buffer[0];
-					int bytes_sent = send(use_fd[0].fd,
-											(char*)buffer_ptr + pm.current_packet_extraction_offset,
-											pm.current_packet_size - pm.current_packet_extraction_offset, 
-											0);
-					if (bytes_sent > 0) {
-						pm.current_packet_extraction_offset += bytes_sent;
-					}
-
-					if (pm.current_packet_extraction_offset == pm.current_packet_size) { //Sent entire packet contents
-						pm.current_packet_extraction_offset = 0;
-						pm.current_task = PacketManagerTask::ProcessPacketSize;
-						pm.Pop();
-					}
-					else {
-						break;
-					}
-				}
-			}
-		}
-
-
+	for (int i = 0; i < to_disconnect.size(); i++) {
+		as[i].tcp.Close();
+		// Remove
+		OnDisconnect(as[i].tcp, "asd");
+		as.erase(as.begin() + i);
 	}
 
-	//Handle packets
 	for (int i = connections.size() - 1; i >= 0; i--) {
 		PacketManager& pm = connections[i].pm_read;
 		while (pm.HasPendingPackets()) {
@@ -244,25 +103,135 @@ int Server::Frame() {
 		}
 	}
 
-	//Remove closed connections!
-
 	return 1;
 }
 
 
-int Server::ServiceConnection(TCPConnection tcp, WSAPOLLFD fd) {
+std::pair<int, std::string> Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
+	
+	PacketManager& pm_write = tcp.pm_write;
+	PacketManager& pm_read = tcp.pm_read;
 
-
-	//int errors = CheckFDErrors();
 	if (fd.revents & POLLERR) {//Nothing to read
-		return 0;
+		return {0, "POLLERR"};
 	}
 	if (fd.revents & POLLHUP) {//Nothing to read
-		return 0;
+		return { 0, "POLLHUP" };
 	}
 	if (fd.revents & POLLNVAL) {//Nothing to read
-		return 0;
+		return { 0, "POLLNVAL" };
 	}
+
+	if (fd.revents & POLLRDNORM) {
+
+		int bytes_recieved = Read(fd, &pm_read, &tcp);
+		if (bytes_recieved == 0) {
+			return { 0, "0 bytes received" };
+		}
+		if (bytes_recieved == SOCKET_ERROR) {
+			return { 0, "Wouldblock error" };
+		}
+		if (bytes_recieved < -1) {
+			return { 0, "-" + std::to_string(bytes_recieved) + " bytes received" };
+		}
+
+		pm_read.current_packet_extraction_offset += bytes_recieved;
+
+		if (pm_read.current_task == PacketManagerTask::ProcessPacketSize) {
+
+			if (pm_read.current_packet_extraction_offset == sizeof(uint16_t)) {
+
+				pm_read.current_packet_size = ntohs(pm_read.current_packet_size);
+
+				if (pm_read.current_packet_size > max_packet_size) {
+					return { 0, "Packet size too large" };
+				}
+
+				pm_read.current_packet_extraction_offset = 0;
+				pm_read.current_task = PacketManagerTask::ProcessPacketContents;
+			}
+		}
+		else if (pm_read.current_task == PacketManagerTask::ProcessPacketContents) {
+
+			std::shared_ptr<Packet> packet = std::make_shared<Packet>();
+			packet->buffer.resize(pm_read.current_packet_size);
+			memcpy(&packet->buffer[0], tcp.buffer, pm_read.current_packet_size);
+
+			pm_read.Append(packet);
+
+			pm_read.current_packet_size = 0;
+			pm_read.current_packet_extraction_offset = 0;
+			pm_read.current_task = PacketManagerTask::ProcessPacketSize;
+		}
+	}
+	
+	if (fd.revents & POLLWRNORM) {
+		int result = Write(fd, &pm_write, &tcp);
+
+	}
+	return { 1, "Success" };
+}
+
+int Server::Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
+	if (pm->current_task == PacketManagerTask::ProcessPacketSize) {
+		//If this by chance only sends one of two bytes from uint16-> extraction offset will take care of it. 
+		 return recv(fd.fd,
+			(char*)&pm->current_packet_size + pm->current_packet_extraction_offset,
+			sizeof(uint16_t) - pm->current_packet_extraction_offset,
+			0);
+	}
+	else if (pm->current_task == PacketManagerTask::ProcessPacketContents) {
+		return recv(fd.fd,
+			(char*)&tcp->buffer + pm->current_packet_extraction_offset,
+			pm->current_packet_size - pm->current_packet_extraction_offset,
+			0);
+	}
+	return 1;
+}
+
+int Server::Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
+	while (pm->HasPendingPackets()) {
+		if (pm->current_task == PacketManagerTask::ProcessPacketSize) {
+			pm->current_packet_size = pm->Retrieve()->buffer.size();
+			uint16_t big_endian_packet_size = htons(pm->current_packet_size);
+			int bytes_sent = send(fd.fd,
+				(char*)&big_endian_packet_size + pm->current_packet_extraction_offset,
+				sizeof(uint16_t) - pm->current_packet_extraction_offset,
+				0);
+			if (bytes_sent > 0) {
+				pm->current_packet_extraction_offset += bytes_sent;
+			}
+
+			if (pm->current_packet_extraction_offset == sizeof(uint16_t)) {
+				pm->current_packet_extraction_offset = 0;
+				pm->current_task = PacketManagerTask::ProcessPacketContents;
+			}
+			else {
+				break; //avoid sending half because of blocking
+			}
+
+		}
+		else if (pm->current_task == PacketManagerTask::ProcessPacketContents) {
+			char* buffer_ptr = &pm->Retrieve()->buffer[0];
+			int bytes_sent = send(fd.fd,
+				(char*)buffer_ptr + pm->current_packet_extraction_offset,
+				pm->current_packet_size - pm->current_packet_extraction_offset,
+				0);
+			if (bytes_sent > 0) {
+				pm->current_packet_extraction_offset += bytes_sent;
+			}
+
+			if (pm->current_packet_extraction_offset == pm->current_packet_size) { //Sent entire packet contents
+				pm->current_packet_extraction_offset = 0;
+				pm->current_task = PacketManagerTask::ProcessPacketSize;
+				pm->Pop();
+			}
+			else {
+				break;
+			}
+		}
+	}
+	return 1;
 }
 
 int Server::AcceptConnections(WSAPOLLFD listening_fd) {
@@ -288,10 +257,8 @@ int Server::AcceptConnections(WSAPOLLFD listening_fd) {
 	accepted_fd.fd = connected_socket.GetSocket();
 	accepted_fd.events = POLLRDNORM | POLLWRNORM;
 	accepted_fd.revents = 0;
-	master_fd.push_back(accepted_fd);
 
 	Connection connection{ accepted_tcp, accepted_fd };
-
 	as.push_back(connection);
 
 	return 1;

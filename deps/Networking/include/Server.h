@@ -23,9 +23,9 @@ public:
 
 	//One server tick
 	int Frame();
-	int ServiceConnection(TCPConnection tcp, WSAPOLLFD fd);
-
-	
+	std::pair<int, std::string> ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd);
+	int Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
+	int Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
 	int AcceptConnections(WSAPOLLFD listening_fd);
 	int CloseConnection(int idx, std::string reason);
 
