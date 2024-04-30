@@ -9,7 +9,7 @@ enum PacketType {
 	Invalid, 
 	String,
 	IntegerArray, 
-
+	Test,
 };
 
 class PacketExecption {
@@ -30,6 +30,7 @@ public:
 
 	uint32_t extraction_offset = sizeof(PacketType);
 	std::vector<char> buffer;
+
 	Packet(PacketType type = PacketType::Invalid) {
 		Clear();
 		AssignPacketType(type);
@@ -41,8 +42,8 @@ public:
 	}
 
 	void AssignPacketType(PacketType packet_type) {
-		PacketType* packet_type_ptr = reinterpret_cast<PacketType*>(&buffer[0]); //Look at the first 2 bytes as a packettype
-		*packet_type_ptr = static_cast<PacketType>(htons(packet_type)); //Convert to network-byte-order
+		PacketType* packet_type_ptr = reinterpret_cast<PacketType*>(&buffer[0]);  //Look at the first 2 bytes as a packettype
+		*packet_type_ptr = static_cast<PacketType>(htons(packet_type)); //Value of the pointer = PacketConvert to network-byte-order
 	}
 
 	void Clear() {

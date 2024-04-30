@@ -36,6 +36,8 @@ int Client::Frame() {
 	Packet s_p(PacketType::String);
 	s_p << std::string("Hello from Client!");
 
+	Packet t_p(PacketType::Test);
+	
 	std::cout << "Client : Sending data chunk...\n";
 	int result = ip_socket.Send(s_p);
 	if (result == 0) {

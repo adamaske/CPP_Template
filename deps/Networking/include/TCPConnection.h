@@ -2,11 +2,7 @@
 
 #include "Socket.h"
 #include "Constants.h"
-
-enum PacketTask {
-	ProcessPacketSize,
-	ProcessPacketContents,
-};
+#include "PacketManager.h"
 struct TCPConnection {
 	TCPConnection(IPSocket s, IPEndpoint ep) {
 		socket = s;
@@ -15,11 +11,10 @@ struct TCPConnection {
 	IPSocket socket;
 	IPEndpoint endpoint;
 
-	PacketTask task = PacketTask::ProcessPacketSize;
-	int extraction_offset = 0;
-	uint16_t packet_size = 0;
 
-	char buffer[max_packet_size];
+	PacketManager pm_read;
+	PacketManager pm_write;
+	char buffer[max_packet_size] = {};
 
 	int Close() {
 		return socket.Close();
@@ -30,7 +25,3 @@ struct TCPConnection {
 	}
 
 };
-
-//std::string ConnectionToString(TCPConnection tcp) {
-//	
-//}

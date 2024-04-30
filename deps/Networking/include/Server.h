@@ -3,6 +3,13 @@
 #include <vector>
 #include "TCPConnection.h"
 #include "Endpoint.h"
+#include <map>
+#include <utility>
+
+struct Connection {
+	TCPConnection tcp;
+	WSAPOLLFD fd;
+};
 
 class Server {
 private:
@@ -16,20 +23,34 @@ public:
 
 	//One server tick
 	int Frame();
+	int ServiceConnection(TCPConnection tcp, WSAPOLLFD fd);
 
-	int CheckForPollErrors(SHORT revent);
+	
 	int AcceptConnections(WSAPOLLFD listening_fd);
 	int CloseConnection(int idx, std::string reason);
 
-	int ProcessPacket(Packet& packet);
+	int ProcessPacket(std::shared_ptr<Packet> packet);
+
+
+	int OnConnect(TCPConnection& connection);
+	int OnDisconnect(TCPConnection& connection, std::string reason);
 
 	int Run();
+
 public:
+	//LISTENING --> 
 	IPSocket listen_socket;
+	WSAPOLLFD listen_fd;
 
 	std::vector<TCPConnection> connections;
 	std::vector<WSAPOLLFD> master_fd; 
 	std::vector<WSAPOLLFD> use_fd;
+
+	std::vector<Connection> as;
+	//We have an array of connections, each connection is associated with a file descriptor
+
+	std::map<int, TCPConnection> map_connections;
+	std::map<int, WSAPOLLFD> map_fd;
 };
 
 template<typename StorageType, typename CallbackType, typename BufferType,int BufferSize>
