@@ -130,7 +130,9 @@ Usage:
 ```cpp
 #include "Logger.h"
 
-Logger::Initalize(); //Call before usage
+Logger::Initalize(L_ALL, L_CONSOLE); //Call before usage
 
-Logger::Log( ERROR, "Reason" )
+Logger::Log( L_ERROR, "Reason" );
+Logger::Log( L_INFO, "Reason" );
+Logger::Log( L_DEBUG, "Reason" );
 ```
