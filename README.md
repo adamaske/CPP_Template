@@ -63,8 +63,8 @@ A simple logger
 Usage:
 ```cpp
 #include "Logger.h"
-
 Logger::Initalize(); //Call before usage
-
-Logger::Log( ERROR, "Reason" )
+Logger::Log( L_ERROR, "Reason" );
+Logger::Log( L_INFO, "Reason" );
+Logger::Log( L_DEBUG, "Reason" );
 ```
