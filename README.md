@@ -1,9 +1,8 @@
 # CPP_Template
 This is a C++ template project. It implements some generic functionality for fast startup of new projects of different kinds. 
 
+The vendor folder contains third-party packages : GLFW, IMGUI, GLAD, GLEW, EIGEM, GLM, 
 
-
-The vendor folder contains third-party packages. 
 - [Building](#building)
 - [Running](#running)
 - [Configuration](#configuration)
@@ -15,6 +14,7 @@ The vendor folder contains third-party packages.
 
 ## Usage
 
+main.cpp
 ```c++
 #include "Config.h"
 
