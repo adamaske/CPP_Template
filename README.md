@@ -86,11 +86,8 @@ Several static libaries are implemented in deps/.
 
 
 ## Networking
-Networking is a static library. 
-Only IPv4 is supported.
-Implemented : Basic TCP server
-To do: 
-For simple and generic functionality : Encapsulate the blocking server in a thread and add received data to a mutexed queue 
+Simple static library implementing a IPv4 non-blocking send and recieve server.
+
 - Server
 ```cpp
 #include "Server.h"
