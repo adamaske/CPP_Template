@@ -49,8 +49,8 @@ void Logger::Log(LogLevel level, std::string message)
     if (level != logger_instance->current_level && logger_instance->current_level != L_ALL) {
         return;
     }
-
-    std::string output = logger_instance->GetDateTime() + " : " + message;
+    std::string level_string = logger_instance->level_text[level];
+    std::string output = logger_instance->GetDateTime() + " " + level_string + " : " + message;
 
     switch (logger_instance->current_output) {
     case L_CONSOLE:

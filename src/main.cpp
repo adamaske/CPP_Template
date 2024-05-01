@@ -47,22 +47,15 @@ int main(int argc, char* argv[]){
 
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
-    std::thread server_thread(&Server::Run, &server);
 
     Client client;
     bool client_run = false;
     std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
     while (true) {
-        std::string user = "";
-        std::getline(std::cin, user);
-        if (user == "s") {
-            client_run = !client_run;
-        }
-        if (user == "q") {
-            client_run = false;
 
-            break;
-        }
+        server.Frame();
+        client.Frame();
+
     }
     //client_thread.join();
     

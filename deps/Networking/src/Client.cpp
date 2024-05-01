@@ -40,7 +40,7 @@ int Client::Frame() {
 	s_p << std::string("Hello from Client!");
 	int bytes = 0;
 	Logger::Log(L_DEBUG, "Client : Sending packet... ");
-	int result = ip_socket.Send((void*) 21323, 12, bytes);
+	int result = ip_socket.Send(s_p);
 	if (result == NETWORK_ERROR) {
 		Logger::Log(L_DEBUG, "Client : Send error, disconnected");
 		ip_socket.Close();
@@ -52,18 +52,12 @@ int Client::Frame() {
 }
 
 int Client::Run(IPEndpoint endpoint, bool* running) {
-
-	while (true) {
-		if (*running) {
-
-			if (!is_connected) {
-				Connect(endpoint);
-			}
-			Frame();
-			Sleep(500);
-		}
+	if (!is_connected) {
+		Connect(endpoint);
+		return 1;
 	}
 
+	Frame();
 	return 1;
 }
 

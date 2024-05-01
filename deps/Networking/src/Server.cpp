@@ -73,9 +73,8 @@ int Server::Frame() {
 		}
 	}
 
-	for (int i = 0; i < fds.size(); i++) { //Disconnected connections with errors, 
+	for (int i = 0; i < connections.size(); i++) { //Disconnected connections with errors, 
 		if (to_disconnect.find(i) != to_disconnect.end()) {
-
 			connections[i].tcp.Close();
 			// Remove
 			OnDisconnect(connections[i].tcp, "Disconnected");
@@ -84,7 +83,7 @@ int Server::Frame() {
 	}
 	to_disconnect.clear();
 
-	for (int i = 0; i < fds.size(); i++) { // Handle queded packets
+	for (int i = 0; i < connections.size(); i++) { // Handle queded packets
 		PacketManager& pm = connections[i].tcp.pm_read;
 		while (pm.HasPendingPackets()) {
 			std::shared_ptr<Packet> front = pm.Retrieve();
@@ -325,12 +324,4 @@ int Server::OnConnect(TCPConnection& connection) {
 int Server::OnDisconnect(TCPConnection& connection, std::string reason) {
 	Logger::Log(L_INFO, "Server : " + connection.ToString() + " - Connection lost [" + reason + "]");
 	return 1;
-}
-
-int Server::Run() {
-	while (true) {
-		Frame();
-
-		Sleep(200);
-	}
 }

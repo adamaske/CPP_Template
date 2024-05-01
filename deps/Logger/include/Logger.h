@@ -34,4 +34,11 @@ private:
 	std::ofstream output_file;
 	LogLevel current_level;
 	LogOutput current_output;
+
+	std::map<LogLevel, std::string> level_text = {	{L_NONE,	"[ NONE  ]"},
+													{L_ERROR,	"[ ERROR ]"},
+													{L_WARNING, "[ WARN  ]"},
+													{L_INFO,	"[ INFO  ]"},
+													{L_DEBUG,	"[ DEBUG ]"},
+													{L_ALL,		"[ ALL   ]"} };
 };
