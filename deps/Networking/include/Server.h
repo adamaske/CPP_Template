@@ -21,13 +21,21 @@ public:
 	//Listen to endpoint and accept connections
 	int Initialize(IPEndpoint endpoint);
 
-	//One server tick
+	//Non-blocking server tick. 
 	int Frame();
-	std::pair<int, std::string> ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd);
+	int ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd);
+	// listen - What fd was used for listener
+	// fd - filedescriptors polled
+	// poll amount - how many interactions were requested
+	int Poll(WSAPOLLFD& listening_fd, std::vector<WSAPOLLFD>& fd_vector, int& poll_amount);
+
+	//Return - Amount of bytes receieved
 	int Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
+
+	//Return - Amount of bytes sent
 	int Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
+
 	int AcceptConnections(WSAPOLLFD listening_fd);
-	int CloseConnection(int idx, std::string reason);
 
 	int ProcessPacket(std::shared_ptr<Packet> packet);
 
@@ -42,18 +50,10 @@ public:
 	IPSocket listen_socket;
 	WSAPOLLFD listen_fd;
 
-	std::vector<TCPConnection> connections;
-	std::vector<WSAPOLLFD> master_fd; 
-	std::vector<WSAPOLLFD> use_fd;
-
-	std::vector<Connection> as;
-	//We have an array of connections, each connection is associated with a file descriptor
-
-	std::map<int, TCPConnection> map_connections;
-	std::map<int, WSAPOLLFD> map_fd;
+	std::vector<Connection> connections;
 };
 
-template<typename StorageType, typename CallbackType, typename BufferType,int BufferSize>
+template<typename StorageType, typename CallbackType, typename BufferType,int BufferSize, typename ParseType>
 class ParseServer {
 private:
 	StorageType* parsed_value_storage;
@@ -69,12 +69,18 @@ public:
 		callback_function = callback;
 	};
 
-	void CallCallback(BufferType buffer[BufferSize]) {
+	// Parse function
+	void ParsePacket(Packet packet);
+
+	ParseType CallCallback(BufferType buffer[BufferSize]) {
 
 		(*callback_function)(buffer);
+
+		return ParseType();
 	};
 
 	void RegisterMutex(std::mutex* m) {
 		mutex = m;
 	}
 };
+

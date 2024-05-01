@@ -10,6 +10,8 @@
 #include "Networking.h"
 #include "Server.h"
 #include "Client.h"
+
+#include "Logger.h"
 int parse_callback(char buffer[10]) {
     std::cout << "Callback function called!\n";
     std::cout << "Data : ";
@@ -21,12 +23,15 @@ int parse_callback(char buffer[10]) {
 }
 
 int main(int argc, char* argv[]){
-    std::cout << "Template VERSION " << Template_VERSION_MAJOR << "." << Template_VERSION_MINOR << "\n";
+    Logger::Initalize(L_ALL, L_CONSOLE);
+    Networking::Intialize();
 
+    Logger::Log(L_INFO, "Template VERSION " + std::to_string(Template_VERSION_MAJOR)  + "." + std::to_string(Template_VERSION_MINOR));
+    
 #pragma region Templated Parsing Server
     if (false) {
         std::vector<int> storage;
-        ParseServer<std::vector<int>, int, char, 10> pserv;
+        ParseServer<std::vector<int>, int, char, 10, int> pserv;
         pserv.RegisterCommonStorage(&storage);
         pserv.RegisterCallbackFunction(*parse_callback);
 
@@ -38,27 +43,31 @@ int main(int argc, char* argv[]){
     }
 #pragma endregion
 
-    Networking::Intialize();
+
 
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
-
-    bool client_run = false;
+    std::thread server_thread(&Server::Run, &server);
 
     Client client;
-
+    bool client_run = false;
     std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
-    std::thread server_thread(&Server::Run, &server);
     while (true) {
         std::string user = "";
         std::getline(std::cin, user);
         if (user == "s") {
             client_run = !client_run;
         }
+        if (user == "q") {
+            client_run = false;
+
+            break;
+        }
     }
     //client_thread.join();
     
     Networking::Shutdown();
-    std::cout << "Closed application...\n";
+
+    Logger::Log(L_INFO, "Closed application...");
     return 0;
 }

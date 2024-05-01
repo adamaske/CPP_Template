@@ -1,9 +1,11 @@
 #pragma once
 #define WIN32_LEAN_AND_MEAN
 #include <winsock.h>
+
+#include "Constants.h"
+
 #include <vector>
 #include <string>
-#include "Constants.h"
 
 enum PacketType {
 	Invalid, 
@@ -41,7 +43,8 @@ public:
 		return static_cast<PacketType>(ntohs(*packet_type_ptr)); //Convert to host-byte-order
 	}
 
-	void AssignPacketType(PacketType packet_type) {
+	//Populates the first bytes of the packet as the packet type
+	void AssignPacketType(PacketType packet_type) { 
 		PacketType* packet_type_ptr = reinterpret_cast<PacketType*>(&buffer[0]);  //Look at the first 2 bytes as a packettype
 		*packet_type_ptr = static_cast<PacketType>(htons(packet_type)); //Value of the pointer = PacketConvert to network-byte-order
 	}

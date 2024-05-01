@@ -1,6 +1,9 @@
 #include "Socket.h"
-#include <iostream>
+#include "Constants.h"
 #include "Packet.h"
+
+#include <iostream>
+
 IPSocket::IPSocket()
 {
 
@@ -17,70 +20,73 @@ int IPSocket::Create()
 {
 	ip_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (ip_socket == INVALID_SOCKET) {
-		std::cout << "Socket Creation error : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Socket Creation Error" + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
 	int result = SetBlocking(true);
 	if (!result) {
-		return 0;
+		Logger::Log(L_ERROR, "Set Blocking Error" + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 	result = SetSocketOption(SocketOption::TCP_NoDelay, TRUE);
 	if (!result) {
-		return 0;
+		Logger::Log(L_ERROR, "Set NoDelay Error" + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Close()
 {
 	if (ip_socket == INVALID_SOCKET) {
-		std::cout << "Socket is invalid, cannot close\n";
+		Logger::Log(L_ERROR, "Cannot close invalid socket");
 		return 0;
 	}
 
 	int result = closesocket(ip_socket);
 	if (result != 0) {
-		std::cout << "Socket close : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Socket close error : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Bind(IPEndpoint endpoint) {
 	sockaddr_in addr = endpoint.GetSockaddr();
 	int result = bind(ip_socket, (sockaddr*)&addr, sizeof(sockaddr_in));
 	if (result != 0) {
-		std::cout << "Bind failed : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Bind failed : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Listen(IPEndpoint endpoint, int backlog) {
 	if (int bound = Bind(endpoint) != 1) {
-		std::cout << "Listen failed as binding failed...\n";
-		return 0;
+		Logger::Log(L_ERROR, "Listen failed as binding failed...");
+		return NETWORK_ERROR;
 	}
 
 	int result = listen(ip_socket, backlog);
 	if (result != 0) {
-		std::cout << "Listen failed : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Listen failed : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
+
 int IPSocket::Accept(IPSocket& out_socket, IPEndpoint* out_endpoint) {
 	sockaddr_in addr = {};
 	int len = sizeof(sockaddr_in);
 
-	SOCKET accepted = accept(ip_socket, (sockaddr*)&addr, &len); //Blocking function
+	SOCKET accepted = accept(ip_socket, (sockaddr*)&addr, &len); //Returns INVALID_SOCKET 
 	if (accepted == INVALID_SOCKET) {
-		std::cout << "Socket : Accept failed... " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Accept failed : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
 	out_socket = IPSocket(accepted);
@@ -89,7 +95,7 @@ int IPSocket::Accept(IPSocket& out_socket, IPEndpoint* out_endpoint) {
 		*out_endpoint = IPEndpoint((sockaddr*)&addr);
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Connect(IPEndpoint endpoint) {
@@ -97,20 +103,20 @@ int IPSocket::Connect(IPEndpoint endpoint) {
 	int result = connect(ip_socket, (sockaddr*)&addr, sizeof(sockaddr_in));
 	if (result != 0) {
 		std::cout << "Connection failed : " << WSAGetLastError() << "\n";
-		return 0;
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Send(const void* data, int byteAmount, int& bytesSent) {
 	
 	bytesSent = send(ip_socket, (const char*)data, byteAmount, 0);
 	if (bytesSent == INVALID_SOCKET) {
-		std::cout << "Sending error : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Sending error : " + std::to_string(WSAGetLastError()));
+		return NETWORK_ERROR;
 	}
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::SendAll(const void* data, int byteAmount) {
@@ -122,12 +128,12 @@ int IPSocket::SendAll(const void* data, int byteAmount) {
 		char* buffer_offset = (char*)data + totalBytesSent;
 		int result = Send(buffer_offset, bytesRemaining, bytesSent);
 		if (result == 0) {
-			return 0;
+			return NETWORK_ERROR;
 		}
 		totalBytesSent += bytesSent;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::Recv(void* destination, int byteAmount, int& bytesRecieved) {
@@ -136,15 +142,15 @@ int IPSocket::Recv(void* destination, int byteAmount, int& bytesRecieved) {
 	if (bytesRecieved == 0) {
 		//Gracefully closed
 		std::cout << "Recv : 0 bytes received = closed gracefully...\n";
-		return -1;
+		return NETWORK_SUCCESS;
 	}
 
 	if (bytesRecieved == SOCKET_ERROR) {
 		std::cout << "Recieve error : " << WSAGetLastError() << "\n";
-		return 0;
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 int IPSocket::RecvAll(void* destination, int byteAmount) {
 
@@ -155,17 +161,14 @@ int IPSocket::RecvAll(void* destination, int byteAmount) {
 
 		char* buffer_offset = (char*)destination + totalBytesReceived;
 		int result = Recv(buffer_offset, bytesRemaining, bytesReceived);
-		if (result == -1) {
-			return -1;
-		}
-		if (result != 1) {
+		if (result == NETWORK_ERROR) {
 			std::cout << "RecvAll : Error \n";
-			return 0;
+			return NETWORK_ERROR;
 		}
 		totalBytesReceived += bytesReceived;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 
@@ -174,16 +177,16 @@ int IPSocket::Send(Packet& packet) {
 	uint16_t encoded_packet_size = htons(packet.buffer.size());
 
 	int result = SendAll(&encoded_packet_size, sizeof(uint16_t));
-	if (result == 0) {
-		return 0;
+	if (result == NETWORK_ERROR) {
+		return NETWORK_ERROR;
 	}
 
 	result = SendAll(packet.buffer.data(), packet.buffer.size());
-	if (result == 0) {
-		return 0;
+	if (result == NETWORK_ERROR) {
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
 int IPSocket::Recv(Packet& packet) {
 	packet.Clear();
@@ -197,8 +200,8 @@ int IPSocket::Recv(Packet& packet) {
 	uint16_t buffer_size = ntohs(encoded_size);
 
 	if (buffer_size > max_packet_size) {
-		std::cout << "Socket : Recv buffer size exeeded max_packet : " << buffer_size << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Socket : Recv buffer size exeeded max_packet : " + buffer_size);
+		return NETWORK_ERROR;
 	}
 
 	packet.buffer.resize(buffer_size);
@@ -207,19 +210,18 @@ int IPSocket::Recv(Packet& packet) {
 		return 0;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }
-
 int IPSocket::SetBlocking(bool blocking) {
+
 	unsigned long no_block = 1;
 	unsigned long block = 0;
 	int result = ioctlsocket(ip_socket, FIONBIO, blocking ? &block : &no_block);
 	if (result == SOCKET_ERROR) {
-		std::cout << "Socket : Failed seting blocking mode : " << WSAGetLastError() << "... " << __FILE__ << ", line " << __LINE__ << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Socket : Failed seting blocking mode : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
-
-	return 1;
+	return NETWORK_SUCCESS;
 }
 
 int IPSocket::SetSocketOption(SocketOption opt, BOOL value) {
@@ -233,9 +235,9 @@ int IPSocket::SetSocketOption(SocketOption opt, BOOL value) {
 	}
 
 	if (result != 0) {
-		std::cout << "Set Socket Option failed with error : " << WSAGetLastError() << "\n";
-		return 0;
+		Logger::Log(L_ERROR, "Set Socket Option failed with error : " + WSAGetLastError());
+		return NETWORK_ERROR;
 	}
 
-	return 1;
+	return NETWORK_SUCCESS;
 }

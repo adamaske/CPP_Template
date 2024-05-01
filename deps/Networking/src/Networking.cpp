@@ -1,18 +1,17 @@
 #include "Networking.h"
+#include "Constants.h"
+#include "Server.h"
+#include "Client.h"
+#include "Socket.h"
+
 #include <iostream>
+#include <thread>
 
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdio.h>
 #pragma comment(lib, "Ws2_32.lib")
-
-#include "Server.h"
-#include "Client.h"
-#include "Socket.h"
-
-#include <thread>
-
 
 Networking::Networking(){
     std::cout << "Networking Constructed\n";

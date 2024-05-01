@@ -11,7 +11,7 @@ The vendor folder contains third-party packages.
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
-
+	- [Logger](#logger)
 ## Building
 Cmake must be installed for building the project. 
 scripts/generate.bat can automatically build the project with cmake 
@@ -57,3 +57,14 @@ Graphics is a static library with OpenGL, GLM, and ImGUI functionality.
 ## Core
 Core is a static library
 To do: Genric JSON parsing
+
+## Logger
+A simple logger
+Usage:
+```cpp
+#include "Logger.h"
+
+Logger::Initalize(); //Call before usage
+
+Logger::Log( ERROR, "Reason" )
+```

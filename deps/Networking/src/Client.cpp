@@ -1,7 +1,8 @@
 #include "Client.h"
-#include <iostream>
-
+#include "Constants.h"
 #include "Packet.h"
+
+#include <iostream>
 
 Client::Client() {
 }
@@ -11,20 +12,22 @@ Client::~Client() {
 
 int Client::Connect(IPEndpoint endpoint) {
 	is_connected = false;
-
 	ip_socket = IPSocket();
-	int result = ip_socket.Create();
-	if (result != 1) {
-		return 0;
-	}
-	ip_socket.SetBlocking(true);
-	result = ip_socket.Connect(endpoint);
-	if (result != 1) {
-		return 0;
-	}
-	is_connected = true;
 
-	return 1;
+	int result = ip_socket.Create();
+	if (result == NETWORK_ERROR) {
+		return NETWORK_ERROR;
+	}
+
+	ip_socket.SetBlocking(true);
+
+	result = ip_socket.Connect(endpoint);
+	if (result == NETWORK_ERROR) {
+		return NETWORK_ERROR;
+	}
+
+	is_connected = true;
+	return NETWORK_SUCCESS;
 }
 
 bool Client::IsConnected() {
@@ -35,12 +38,12 @@ int Client::Frame() {
 
 	Packet s_p(PacketType::String);
 	s_p << std::string("Hello from Client!");
-
-	Packet t_p(PacketType::Test);
-	
-	std::cout << "Client : Sending data chunk...\n";
-	int result = ip_socket.Send(s_p);
-	if (result == 0) {
+	int bytes = 0;
+	Logger::Log(L_DEBUG, "Client : Sending packet... ");
+	int result = ip_socket.Send((void*) 21323, 12, bytes);
+	if (result == NETWORK_ERROR) {
+		Logger::Log(L_DEBUG, "Client : Send error, disconnected");
+		ip_socket.Close();
 		is_connected = false;
 		return 0;
 	}
@@ -50,11 +53,13 @@ int Client::Frame() {
 
 int Client::Run(IPEndpoint endpoint, bool* running) {
 
-	int result = Connect(endpoint);
-
 	while (true) {
 		if (*running) {
-			result = Frame();
+
+			if (!is_connected) {
+				Connect(endpoint);
+			}
+			Frame();
 			Sleep(500);
 		}
 	}

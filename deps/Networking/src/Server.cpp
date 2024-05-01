@@ -1,10 +1,11 @@
 #include "Server.h"
-#include <iostream>
+#include "Constants.h"
 #include "Packet.h"
 #include "Networking.h"
 #include "PacketManager.h"
-#define NETWORK_ERROR 0
-#define NETWORK_SUCCESS 1
+
+#include <iostream>
+
 
 Server::Server()
 {
@@ -18,21 +19,21 @@ int Server::Initialize(IPEndpoint endpoint) {
 	int result = Networking::Intialize();
 	if (result != 1) {
 		//Something is wrong
-		std::cout << "Server : Failed to initalize... " << __FILE__ << ", line " << __LINE__ << "\n";
+		Logger::Log(L_ERROR, "Server : Failed to initalize... ");
 		return NETWORK_ERROR;
 	}
 
 	listen_socket = IPSocket();
 	result = listen_socket.Create();
 	if (result == NETWORK_ERROR) {
-		std::cout << "Server : Failed to create socket... " << __FILE__ << ", line " << __LINE__ << "\n";
+		Logger::Log(L_ERROR, "Server : Failed to create socket...");
 		return NETWORK_ERROR;
 	}
 
 	listen_socket.SetBlocking(false);
 	result = listen_socket.Listen(endpoint);
 	if (result != NETWORK_SUCCESS) {
-		std::cout << "Server : Failed listening... " << __FILE__ << ", line " << __LINE__ << "\n";
+		Logger::Log(L_ERROR, "Server : Failed listening... ");
 		return NETWORK_ERROR;
 	}
 
@@ -42,61 +43,54 @@ int Server::Initialize(IPEndpoint endpoint) {
 	listen_fd.events = POLLRDNORM; //PULLRDNORM or PULLWRNORM, we're never writing to our listen socket ,
 	listen_fd.revents = 0; //thus we only care about wether we can read 
 
-	std::cout << "Server : Listening on " << endpoint.ShortDesc() << "...\n";
+	Logger::Log(L_INFO, "Server : Listening on " + endpoint.ShortDesc());
 
 	return NETWORK_SUCCESS;
 }
 
 int Server::Frame() {
-	std::vector<WSAPOLLFD> fds = { listen_fd, };
-	for (auto& connection : as) {
-		fds.push_back(connection.fd);
+
+	WSAPOLLFD lfd;
+	std::vector<WSAPOLLFD> fds;
+	int poll_amount = 0;
+
+	int result = Poll(lfd, fds, poll_amount); //listen fd, connection fd, amount
+	if (result == NETWORK_ERROR) {
+		return NETWORK_ERROR;
 	}
 
-	int poll = WSAPoll(fds.data(), fds.size(), 1); //
+	//This currently adds a connection 
+	result = AcceptConnections(lfd); // Listening
 
-	if (poll == SOCKET_ERROR) {
-		std::cout << "Server : Poll error : " << WSAGetLastError() << "\n";
-		return 0;
-	}
-	if (poll == 0) { //Nothing to poll
-		std::cout << "Server : No poll results\n";
-		return 1;
-	}
-;
-	int accepted = AcceptConnections(listen_fd); // Listening
-	listen_fd.revents = 0;
-
-	std::vector<int> to_disconnect = {};
-	for (int i = 0; i < as.size(); i++) {
-
-		TCPConnection& tcp = as[i].tcp;
-		WSAPOLLFD& fd = as[i].fd;
-
-		std::pair<int, std::string> result = ServiceConnection(tcp, fd);
-		if (result.first == 0) {
-			to_disconnect.push_back(i);
-			std::cout << "Server : Service failed " << result.second << "\n";
+	std::map<int, bool> to_disconnect; // index, disconnect
+	//For every file descriptor polled 
+	for (int i = 0; i < fds.size(); i++) { // Read data in packetmanagers
+		result = ServiceConnection(connections[i].tcp, fds[i]);
+		if (result == NETWORK_ERROR) {
+			to_disconnect.insert({ i, true });
+			Logger::Log(L_DEBUG, "Server : " + connections[i].tcp.ToString() + "marked for disconnecting...");
 			continue;
 		}
-
-		fd.revents = 0; // Clear revents
 	}
 
-	for (int i = 0; i < to_disconnect.size(); i++) {
-		as[i].tcp.Close();
-		// Remove
-		OnDisconnect(as[i].tcp, "asd");
-		as.erase(as.begin() + i);
-	}
+	for (int i = 0; i < fds.size(); i++) { //Disconnected connections with errors, 
+		if (to_disconnect.find(i) != to_disconnect.end()) {
 
-	for (int i = connections.size() - 1; i >= 0; i--) {
-		PacketManager& pm = connections[i].pm_read;
+			connections[i].tcp.Close();
+			// Remove
+			OnDisconnect(connections[i].tcp, "Disconnected");
+			connections.erase(connections.begin() + i);
+		}
+	}
+	to_disconnect.clear();
+
+	for (int i = 0; i < fds.size(); i++) { // Handle queded packets
+		PacketManager& pm = connections[i].tcp.pm_read;
 		while (pm.HasPendingPackets()) {
 			std::shared_ptr<Packet> front = pm.Retrieve();
 			int processed = ProcessPacket(front);
 			if (processed == 0) {
-				CloseConnection(i, "Server : Packet parsing failed!");
+				to_disconnect.insert({ i, true });
 				break;
 			}
 			pm.Pop();
@@ -106,33 +100,62 @@ int Server::Frame() {
 	return 1;
 }
 
+int Server::Poll(WSAPOLLFD& listening_fd, std::vector<WSAPOLLFD>& fd_vector, int& poll_amount) {
+	std::vector<WSAPOLLFD> polled_fds = { listen_fd};
+	for (Connection& connection : connections) {
+		polled_fds.push_back(connection.fd);
+	}
 
-std::pair<int, std::string> Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
+	poll_amount = WSAPoll(polled_fds.data(), polled_fds.size(), 1); //0th = listen, 1 to Size = connection, 
+
+	if (poll_amount == SOCKET_ERROR) {
+		Logger::Log(L_ERROR, "Server : Poll error : " + WSAGetLastError());
+		return NETWORK_ERROR;
+	}
+
+	if (poll_amount == 0) { //Nothing to poll
+		return NETWORK_SUCCESS;
+	}
+
+	listening_fd = polled_fds[0]; // <-- fill listen fd
+	polled_fds.erase(polled_fds.begin()); //remove listen fd from polled
+	fd_vector = polled_fds; // set fd_vector equal to polled
+
+	return NETWORK_SUCCESS;
+}
+
+int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
 	
 	PacketManager& pm_write = tcp.pm_write;
 	PacketManager& pm_read = tcp.pm_read;
 
 	if (fd.revents & POLLERR) {//Nothing to read
-		return {0, "POLLERR"};
+		Logger::Log(L_ERROR, "Server : POLLERR");
+		return NETWORK_ERROR;
 	}
 	if (fd.revents & POLLHUP) {//Nothing to read
-		return { 0, "POLLHUP" };
+		Logger::Log(L_ERROR, "Server : POLLHUP");
+		return NETWORK_ERROR;
 	}
 	if (fd.revents & POLLNVAL) {//Nothing to read
-		return { 0, "POLLNVAL" };
+		Logger::Log(L_ERROR, "Server : POLLNVAL");
+		return NETWORK_ERROR;
 	}
 
 	if (fd.revents & POLLRDNORM) {
-
 		int bytes_recieved = Read(fd, &pm_read, &tcp);
+
 		if (bytes_recieved == 0) {
-			return { 0, "0 bytes received" };
+			Logger::Log(L_ERROR, "Server : Read error, 0 bytes receieved");
+			return NETWORK_ERROR;
 		}
-		if (bytes_recieved == SOCKET_ERROR) {
-			return { 0, "Wouldblock error" };
+		if (bytes_recieved == WSAEWOULDBLOCK) {
+			Logger::Log(L_ERROR, "Server : Read error, WOULD BLOCK");
+			return NETWORK_ERROR;
 		}
 		if (bytes_recieved < -1) {
-			return { 0, "-" + std::to_string(bytes_recieved) + " bytes received" };
+			Logger::Log(L_ERROR, "Server : Negative bytes received");
+			return NETWORK_ERROR;
 		}
 
 		pm_read.current_packet_extraction_offset += bytes_recieved;
@@ -144,7 +167,8 @@ std::pair<int, std::string> Server::ServiceConnection(TCPConnection& tcp, WSAPOL
 				pm_read.current_packet_size = ntohs(pm_read.current_packet_size);
 
 				if (pm_read.current_packet_size > max_packet_size) {
-					return { 0, "Packet size too large" };
+					Logger::Log(L_ERROR, "Server : Packet size exceeded MAX_PACKET_SIZE");
+					return NETWORK_ERROR;
 				}
 
 				pm_read.current_packet_extraction_offset = 0;
@@ -169,10 +193,11 @@ std::pair<int, std::string> Server::ServiceConnection(TCPConnection& tcp, WSAPOL
 		int result = Write(fd, &pm_write, &tcp);
 
 	}
-	return { 1, "Success" };
+
+	return NETWORK_SUCCESS;
 }
 
-int Server::Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
+int Server::Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) { //Return amount of bytes received
 	if (pm->current_task == PacketManagerTask::ProcessPacketSize) {
 		//If this by chance only sends one of two bytes from uint16-> extraction offset will take care of it. 
 		 return recv(fd.fd,
@@ -186,7 +211,7 @@ int Server::Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
 			pm->current_packet_size - pm->current_packet_extraction_offset,
 			0);
 	}
-	return 1;
+	return NETWORK_ERROR;
 }
 
 int Server::Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
@@ -234,9 +259,10 @@ int Server::Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) {
 	return 1;
 }
 
-int Server::AcceptConnections(WSAPOLLFD listening_fd) {
+int Server::AcceptConnections(WSAPOLLFD fd) {
 	//Atleast 1 fd has the events pending we're polling for
-	if (!(listening_fd.revents & POLLRDNORM)) {//bitwise AND operation to check for flagged events 
+	if (!(fd.revents & POLLRDNORM)) {//bitwise AND operation to check for flagged events 
+		//Logger::Log(L_DEBUG, "Server : POLLRDNORM events");
 		return 0;
 	}
 
@@ -245,39 +271,20 @@ int Server::AcceptConnections(WSAPOLLFD listening_fd) {
 
 	int result = listen_socket.Accept(connected_socket, &connected_endpoint);
 	if (result != NETWORK_SUCCESS) {
-		std::cout << "Server : Failed accept...\n";
-		return 0;
+		Logger::Log(L_ERROR, "Server : Failed accept");
+		return NETWORK_ERROR;
 	}
 
-	connections.emplace_back(TCPConnection(connected_socket, connected_endpoint));
-	TCPConnection& accepted_tcp = connections[connections.size() - 1];
-	OnConnect(accepted_tcp);
-
-	WSAPOLLFD accepted_fd = {};
+	WSAPOLLFD accepted_fd = {}; //Create read and write fd for this connection
 	accepted_fd.fd = connected_socket.GetSocket();
 	accepted_fd.events = POLLRDNORM | POLLWRNORM;
 	accepted_fd.revents = 0;
 
-	Connection connection{ accepted_tcp, accepted_fd };
-	as.push_back(connection);
+	Connection connection{ TCPConnection(connected_socket, connected_endpoint), accepted_fd };
+	connections.push_back(connection);
 
-	return 1;
-}
-
-
-int Server::CloseConnection(int idx, std::string reason) {
-	
-	TCPConnection& connection = connections[idx];
-	OnDisconnect(connection, reason);
-
-	connection.Close();
-
-	master_fd.erase(master_fd.begin() + idx + 1);
-	use_fd.erase(use_fd.begin() + idx + 1);
-	connections.erase(connections.begin() + idx);
-
-	return 1;
-
+	OnConnect(connections[connections.size() - 1].tcp);
+	return NETWORK_SUCCESS;
 }
 
 int Server::ProcessPacket(std::shared_ptr<Packet> packet) {
@@ -288,7 +295,7 @@ int Server::ProcessPacket(std::shared_ptr<Packet> packet) {
 	case String: {
 		std::string msg;
 		*packet >> msg;
-		std::cout << "Message : " << msg << "\n";
+		Logger::Log(L_INFO, "MESSAGE : " + msg);
 		break;
 	}
 	case IntegerArray: {
@@ -311,12 +318,12 @@ int Server::ProcessPacket(std::shared_ptr<Packet> packet) {
 }
 
 int Server::OnConnect(TCPConnection& connection) {
-	std::cout << "Server : " << connection.ToString() << " - New connection accepted.\n";
+	Logger::Log(L_INFO, "Server : " + connection.ToString() + " - New connection accepted.");
 	return 1;
 }
 
 int Server::OnDisconnect(TCPConnection& connection, std::string reason) {
-	std::cout << "Server : " << connection.ToString() << " - Connection lost [" << reason << "]\n";
+	Logger::Log(L_INFO, "Server : " + connection.ToString() + " - Connection lost [" + reason + "]");
 	return 1;
 }
 
