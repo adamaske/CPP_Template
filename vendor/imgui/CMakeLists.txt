@@ -1,9 +1,9 @@
 file(GLOB SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp )
 file(GLOB INCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 
-add_library(Networking STATIC ${SRCS})
+add_library(ImGUI STATIC ${SRCS})
 
-target_include_directories(Networking PUBLIC
+target_include_directories(ImGUI PUBLIC ${INCS}
 ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(Networking PRIVATE Logger)
+target_link_libraries(ImGUI PRIVATE GLFW GLEW)

@@ -52,12 +52,17 @@ int Client::Frame() {
 }
 
 int Client::Run(IPEndpoint endpoint, bool* running) {
-	if (!is_connected) {
-		Connect(endpoint);
-		return 1;
+	while (running) {
+		if (!is_connected) {
+			Connect(endpoint);
+		}
+
+
+		Frame();
+
+		Sleep(500);
 	}
 
-	Frame();
 	return 1;
 }
 

@@ -12,6 +12,51 @@ The vendor folder contains third-party packages.
 	- [Graphics](#graphics)
 	- [Core](#core)
 	- [Logger](#logger)
+
+## Usage
+
+```c++
+#include "Config.h"
+
+#include "Core.h"
+#include "Graphics.h"
+#include "Logger.h"
+
+#include "Networking.h"
+#include "Server.h"
+#include "Client.h"
+
+int main(int argc, char* argv[]){
+    Logger::Initalize(L_ALL, L_GUI);
+    Networking::Intialize();
+
+    Logger::Log(L_INFO, "TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+
+    Graphics graphics;
+    graphics.SetLoggerWindow(Logger::GetWindow());
+    graphics.Init();
+
+    Server server;
+    server.Initialize(IPEndpoint("localhost", 8000));
+    
+    Client client;
+    bool client_run = true;
+    std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
+    
+    int result = 1;
+    while (result) {
+        server.Frame(); //Runs the server
+        result = graphics.Render(); //return 0 when window closes
+    }
+
+    client_thread.join();
+
+    //client_run = false;
+    Networking::Shutdown();
+    return 0;
+}
+```
+
 ## Building
 Cmake must be installed for building the project. 
 scripts/generate.bat can automatically build the project with cmake 
@@ -47,12 +92,33 @@ Implemented : Basic TCP server
 To do: 
 For simple and generic functionality : Encapsulate the blocking server in a thread and add received data to a mutexed queue 
 - Server
+```cpp
+#include "Server.h"
 
+Server server;
+server.Initialize(IPEndpoint("localhost", 8000));
+server.SetPacketParsingCallback() - NOT IMPLEMENTED
+while(true){
+    server.Frame();
+}
+```
 - Client
+The client is blocking, thus run it in a thread. Setting the bool to false closes the client.
+```cpp
+Client client;
+bool client_run = true;
+std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
+```   
 
 ## Graphics
-
 Graphics is a static library with OpenGL, GLM, and ImGUI functionality. 
+```cpp
+Graphics graphics;
+graphics.Init;
+while(true){
+    server.Render();
+}
+```
 
 ## Core
 Core is a static library

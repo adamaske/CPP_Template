@@ -6,20 +6,8 @@
 #include <vector>
 #include <map>
 
-enum LogLevel {
-	L_NONE,
-	L_ERROR,
-	L_WARNING,
-	L_INFO,
-	L_DEBUG, 
-	L_ALL
-};
-
-enum LogOutput {
-	L_CONSOLE = 0,
-	L_FILE = 1,
-	L_GUI = 2
-};
+#include "LoggerConstants.h"
+#include "LoggerWindow.h"
 
 class Logger {
 public:
@@ -28,12 +16,15 @@ public:
 
 	static void Log(LogLevel level, std::string message);
 
-	std::string GetDateTime();
+	static std::string GetDateTime();
 
+	static std::string LogToString(LogElement log);
+
+	static std::shared_ptr<LoggerWindow> GetWindow();
 private:
 	std::ofstream output_file;
-	LogLevel current_level;
-	LogOutput current_output;
+	LogLevel current_level = L_ALL;
+	LogOutput current_output = L_CONSOLE;
 
 	std::map<LogLevel, std::string> level_text = {	{L_NONE,	"[ NONE  ]"},
 													{L_ERROR,	"[ ERROR ]"},
@@ -41,4 +32,10 @@ private:
 													{L_INFO,	"[ INFO  ]"},
 													{L_DEBUG,	"[ DEBUG ]"},
 													{L_ALL,		"[ ALL   ]"} };
+
+	std::shared_ptr<LoggerWindow> logger_window = nullptr;
+
+	std::vector<LogElement> logs;
+
+	
 };

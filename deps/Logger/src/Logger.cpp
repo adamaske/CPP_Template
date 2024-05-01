@@ -1,14 +1,15 @@
 #include "Logger.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <iostream>
 #include <chrono>
 #include <ctime> 
 #include <stdio.h>
 #include <time.h>
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
 
 static std::shared_ptr<Logger> logger_instance;
+
 Logger::~Logger() {
     if (current_output == L_FILE) {
 
@@ -37,6 +38,9 @@ void Logger::Initalize(LogLevel level, LogOutput output)
         break;
     case L_GUI:
         //Graphics -> Create a logg window
+        logger_instance->logger_window = std::make_shared<LoggerWindow>();
+
+        logger_instance->logger_window->Clear();
         break;
     }
 }
@@ -49,21 +53,22 @@ void Logger::Log(LogLevel level, std::string message)
     if (level != logger_instance->current_level && logger_instance->current_level != L_ALL) {
         return;
     }
-    std::string level_string = logger_instance->level_text[level];
-    std::string output = logger_instance->GetDateTime() + " " + level_string + " : " + message;
-
+    LogElement log = { Logger::GetDateTime(), level, message };
+    
     switch (logger_instance->current_output) {
     case L_CONSOLE:
-        std::cout << output << "\n";
+        std::cout << Logger::LogToString(log) << "\n";
         break;
     case L_FILE:
         if (!logger_instance->output_file.is_open()) {
             break;
         }
-        logger_instance->output_file << output << std::endl;
+        logger_instance->output_file << Logger::LogToString(log) << std::endl;
         break;
     case L_GUI:
-        //TODO : 
+        //TODO : Init window
+
+        logger_instance->logger_window->AppendLog(log);
         break;
     }
 }
@@ -75,4 +80,12 @@ std::string Logger::GetDateTime() {
     tstruct = *localtime(&now);
     strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
     return buf;
+}
+
+std::string Logger::LogToString(LogElement log) {
+    return log.date_time + " " + logger_instance->level_text[log.level] + " : " + log.message;
+}
+std::shared_ptr<LoggerWindow>  Logger::GetWindow() {
+    return logger_instance->logger_window;
+
 }

@@ -37,11 +37,10 @@ public:
 
 	int AcceptConnections(WSAPOLLFD listening_fd);
 
-	int ProcessPacket(std::shared_ptr<Packet> packet);
+	virtual int ProcessPacket(std::shared_ptr<Packet> packet);
 
-
-	int OnConnect(TCPConnection& connection);
-	int OnDisconnect(TCPConnection& connection, std::string reason);
+	virtual int OnConnect(TCPConnection& connection);
+	virtual int OnDisconnect(TCPConnection& connection, std::string reason);
 
 	int Run();
 
