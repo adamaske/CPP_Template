@@ -14,7 +14,7 @@ void LoggerWindow::LoggerWindowCallback() {
 LoggerWindow::LoggerWindow() {
     auto callback_sink = std::make_shared<spdlog::sinks::callback_sink_mt>
         ([this](const spdlog::details::log_msg& msg) {
-
+        
         auto time_point = msg.time;
         std::time_t time = std::chrono::system_clock::to_time_t(time_point);
         std::string time_string = std::ctime(&time);
@@ -22,17 +22,15 @@ LoggerWindow::LoggerWindow() {
 
         std::string level_string(spdlog::level::to_short_c_str(msg.level));
         std::string payload_string(msg.payload.data());
-
-        std::string text = time_string + " [" + level_string + "] " + payload_string + "\n";
+        std::string text = "[" + level_string + "] " + payload_string + "\n";
 
         va_list args = { };
         buf.appendfv(text.c_str(), args);
 
         scroll_to_bottom = true;
     });
-    callback_sink->set_level(spdlog::level::info);
-
-    spdlog::get("TEMPLATE Logger")->sinks().push_back(callback_sink);
+    //callback_sink->set_level(spdlog::level::info);
+    spdlog::get("Main")->sinks().push_back(callback_sink);
 }
 
 int LoggerWindow::Render()

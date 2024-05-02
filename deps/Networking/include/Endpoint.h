@@ -80,7 +80,9 @@ struct IPEndpoint {
 		}
 		std::cout << "\n";
 	};
+
 	std::string ShortDesc() {
-		return ip_string + " : " + std::to_string(port);
+		//Something wierd is added on the end of the ip_string during inet_ntop making imgui unable to read it, thus c_str conversion
+		return "[" + std::string(ip_string.c_str()) + " : " + std::to_string(port) + "]";
 	}
 }; 

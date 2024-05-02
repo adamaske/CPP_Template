@@ -2,6 +2,8 @@
 #include "Constants.h"
 #include "Packet.h"
 
+#include "spdlog/spdlog.h"
+
 #include <iostream>
 
 IPSocket::IPSocket()
@@ -20,18 +22,18 @@ int IPSocket::Create()
 {
 	ip_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (ip_socket == INVALID_SOCKET) {
-		Logger::Log(L_ERROR, "Socket Creation Error" + WSAGetLastError());
+		spdlog::error( "Socket Creation Error" + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 
 	int result = SetBlocking(true);
 	if (!result) {
-		Logger::Log(L_ERROR, "Set Blocking Error" + WSAGetLastError());
+		spdlog::error( "Set Blocking Error" + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 	result = SetSocketOption(SocketOption::TCP_NoDelay, TRUE);
 	if (!result) {
-		Logger::Log(L_ERROR, "Set NoDelay Error" + WSAGetLastError());
+		spdlog::error( "Set NoDelay Error" + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 	return NETWORK_SUCCESS;
@@ -40,13 +42,13 @@ int IPSocket::Create()
 int IPSocket::Close()
 {
 	if (ip_socket == INVALID_SOCKET) {
-		Logger::Log(L_ERROR, "Cannot close invalid socket");
+		spdlog::error( "Cannot close invalid socket");
 		return 0;
 	}
 
 	int result = closesocket(ip_socket);
 	if (result != 0) {
-		Logger::Log(L_ERROR, "Socket close error : " + WSAGetLastError());
+		spdlog::error( "Socket close error : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 
@@ -57,7 +59,7 @@ int IPSocket::Bind(IPEndpoint endpoint) {
 	sockaddr_in addr = endpoint.GetSockaddr();
 	int result = bind(ip_socket, (sockaddr*)&addr, sizeof(sockaddr_in));
 	if (result != 0) {
-		Logger::Log(L_ERROR, "Bind failed : " + WSAGetLastError());
+		spdlog::error( "Bind failed : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 
@@ -66,13 +68,13 @@ int IPSocket::Bind(IPEndpoint endpoint) {
 
 int IPSocket::Listen(IPEndpoint endpoint, int backlog) {
 	if (int bound = Bind(endpoint) != 1) {
-		Logger::Log(L_ERROR, "Listen failed as binding failed...");
+		spdlog::error( "Listen failed as binding failed...");
 		return NETWORK_ERROR;
 	}
 
 	int result = listen(ip_socket, backlog);
 	if (result != 0) {
-		Logger::Log(L_ERROR, "Listen failed : " + WSAGetLastError());
+		spdlog::error( "Listen failed : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 
@@ -85,7 +87,7 @@ int IPSocket::Accept(IPSocket& out_socket, IPEndpoint* out_endpoint) {
 
 	SOCKET accepted = accept(ip_socket, (sockaddr*)&addr, &len); //Returns INVALID_SOCKET 
 	if (accepted == INVALID_SOCKET) {
-		Logger::Log(L_ERROR, "Accept failed : " + WSAGetLastError());
+		spdlog::error( "Accept failed : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 
@@ -113,7 +115,7 @@ int IPSocket::Send(const void* data, int byteAmount, int& bytesSent) {
 	
 	bytesSent = send(ip_socket, (const char*)data, byteAmount, 0);
 	if (bytesSent == INVALID_SOCKET) {
-		Logger::Log(L_ERROR, "Sending error : " + std::to_string(WSAGetLastError()));
+		spdlog::error( "Sending error : " + std::to_string(WSAGetLastError()));
 		return NETWORK_ERROR;
 	}
 	return NETWORK_SUCCESS;
@@ -200,7 +202,7 @@ int IPSocket::Recv(Packet& packet) {
 	uint16_t buffer_size = ntohs(encoded_size);
 
 	if (buffer_size > max_packet_size) {
-		Logger::Log(L_ERROR, "Socket : Recv buffer size exeeded max_packet : " + buffer_size);
+		spdlog::error( "Socket : Recv buffer size exeeded max_packet : " + buffer_size);
 		return NETWORK_ERROR;
 	}
 
@@ -218,7 +220,7 @@ int IPSocket::SetBlocking(bool blocking) {
 	unsigned long block = 0;
 	int result = ioctlsocket(ip_socket, FIONBIO, blocking ? &block : &no_block);
 	if (result == SOCKET_ERROR) {
-		Logger::Log(L_ERROR, "Socket : Failed seting blocking mode : " + WSAGetLastError());
+		spdlog::error( "Socket : Failed seting blocking mode : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 	return NETWORK_SUCCESS;
@@ -235,7 +237,7 @@ int IPSocket::SetSocketOption(SocketOption opt, BOOL value) {
 	}
 
 	if (result != 0) {
-		Logger::Log(L_ERROR, "Set Socket Option failed with error : " + WSAGetLastError());
+		spdlog::error( "Set Socket Option failed with error : " + WSAGetLastError());
 		return NETWORK_ERROR;
 	}
 

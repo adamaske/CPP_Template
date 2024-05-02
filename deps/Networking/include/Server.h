@@ -6,11 +6,6 @@
 #include <map>
 #include <utility>
 
-struct Connection {
-	TCPConnection tcp;
-	WSAPOLLFD fd;
-};
-
 class Server {
 private:
 
@@ -30,12 +25,8 @@ public:
 	int Poll(WSAPOLLFD& listening_fd, std::vector<WSAPOLLFD>& fd_vector, int& poll_amount);
 
 	int Read(TCPConnection& tcp, WSAPOLLFD& fd);
-	//Return - Amount of bytes receieved
-	int Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
 
-	int Write(WSAPOLLFD fd, TCPConnection& tcp);
-	//Return - Amount of bytes sent
-	int Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
+	int Write(TCPConnection& tcp, WSAPOLLFD fd);
 
 	int AcceptConnections(WSAPOLLFD listening_fd);
 
@@ -51,7 +42,9 @@ public:
 	IPSocket listen_socket;
 	WSAPOLLFD listen_fd;
 
-	std::vector<Connection> connections;
+	std::vector<TCPConnection> tcps;
+	std::vector<WSAPOLLFD> master_fds;
+	std::vector<WSAPOLLFD> use_fds;
 };
 
 template<typename StorageType, typename CallbackType, typename BufferType,int BufferSize, typename ParseType>

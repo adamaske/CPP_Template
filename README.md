@@ -30,7 +30,7 @@ int main(int argc, char* argv[]){
     Logger::Initalize(L_ALL, L_GUI);
     Networking::Intialize();
 
-    Logger::Log(L_INFO, "TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    spdlog::info( "TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
 
     Graphics graphics;
     graphics.SetLoggerWindow(Logger::GetWindow());

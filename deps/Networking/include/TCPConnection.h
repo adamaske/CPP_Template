@@ -7,11 +7,11 @@ struct TCPConnection {
 	IPSocket socket;
 	IPEndpoint endpoint;
 
-	PacketManager pm_read;
-	PacketManager pm_write;
+	int read_buffer_size = 0; //
+	char read_buffer[max_packet_size] = {}; //
 
-	int buffer_size = 0; //
-	char buffer[max_packet_size] = {}; //
+	int write_buffer_size = 0;
+	char write_buffer[max_packet_size] = {};
 
 	TCPConnection(IPSocket s, IPEndpoint ep) {
 		socket = s;
@@ -23,7 +23,7 @@ struct TCPConnection {
 	}
 
 	std::string ToString() {
-		return " [" + endpoint.ShortDesc() + "] ";
+		return endpoint.ShortDesc();
 	}
 
 };

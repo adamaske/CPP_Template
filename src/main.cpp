@@ -1,21 +1,18 @@
 #include "Config.h"
 
 #include "Core.h"
+
 #include "Graphics.h"
-#include "Logger.h"
 
 #include "Networking.h"
 #include "Server.h"
 #include "Client.h"
 
-#include <nlohmann/json.hpp>
-
 #include "spdlog/spdlog.h"
-#include "spdlog/sinks/callback_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 void InitLogger() {
-    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("TEMPLATE Logger");
+    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("Main");
     spdlog::set_default_logger(logger);
 
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>(); //Console printing
@@ -25,10 +22,8 @@ void InitLogger() {
 int main(int argc, char* argv[]){
     InitLogger();
 
-    Logger::Initalize(L_INFO, L_GUI);
     Networking::Intialize(),
-    Logger::Log(L_INFO, "TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
-
+    spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
 
     Graphics graphics;
     graphics.Init("Template"); //TODO : How to handle loggerwindow, its created here if Logger::OutputType = L_GUI
@@ -36,10 +31,6 @@ int main(int argc, char* argv[]){
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
     
-    //Declare robot
-
-    //Render
-
     int result = 1;
     while (result) {
 

@@ -2,6 +2,8 @@
 #include "Constants.h"
 #include "Packet.h"
 
+#include "spdlog/spdlog.h"
+
 #include <iostream>
 
 Client::Client() {
@@ -39,10 +41,10 @@ int Client::Frame() {
 	Packet s_p(PacketType::String);
 	s_p << std::string("Hello from Client!");
 	int bytes = 0;
-	Logger::Log(L_DEBUG, "Client : Sending packet... ");
+	spdlog::debug( "Client : Sending packet... ");
 	int result = ip_socket.Send(s_p);
 	if (result == NETWORK_ERROR) {
-		Logger::Log(L_DEBUG, "Client : Send error, disconnected");
+		spdlog::debug( "Client : Send error, disconnected");
 		ip_socket.Close();
 		is_connected = false;
 		return 0;

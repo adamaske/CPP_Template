@@ -16,11 +16,12 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
-#include "Logger.h"
+#include "spdlog/spdlog.h"
+
 
 static void glfw_error_callback(int error, const char* description)
 {
-    Logger::Log(L_ERROR, "GLFW Error [" + std::to_string(error) + "] " + std::string(description));
+    spdlog::error( "GLFW Error [" + std::to_string(error) + "] " + std::string(description));
 }
 
 glm::mat4 camera(float Translate, glm::vec2 const& Rotate)
@@ -44,7 +45,7 @@ Graphics::~Graphics() {
 int Graphics::Init(std::string title) {
 
     if (glfwInit() != GLFW_TRUE) {
-        Logger::Log(L_ERROR, "GLFW Init failed.");
+        spdlog::error( "GLFW Init failed.");
         return 0;
     }
   
@@ -56,7 +57,7 @@ int Graphics::Init(std::string title) {
     // Create window with graphics context
     window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
     if (!window) {
-        Logger::Log(L_ERROR, "Window creation failed.");
+        spdlog::error( "Window creation failed.");
         return 0;
     }
 
@@ -64,7 +65,7 @@ int Graphics::Init(std::string title) {
     glfwSwapInterval(1); // Enable vsync
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        Logger::Log(L_ERROR, "GLAD Init failed.");
+        spdlog::error( "GLAD Init failed.");
         return 0;
     }
     bool show_demo_window = true;
@@ -85,9 +86,7 @@ int Graphics::Init(std::string title) {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
-    if (Logger::GetOutputType() == L_GUI) {
-        AppendGUIWindow(std::make_shared<LoggerWindow>());
-    }
+    AppendGUIWindow(std::make_shared<LoggerWindow>());
 
     return 1;
 }
