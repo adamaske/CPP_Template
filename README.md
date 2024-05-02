@@ -122,7 +122,7 @@ Core is a static library
 To do: Genric JSON parsing
 
 ## Logger
-A simple logger
+A simple logger, use spdlog for GUI callback.
 Usage:
 ```cpp
 #include "Logger.h"
