@@ -10,7 +10,8 @@ struct TCPConnection {
 	PacketManager pm_read;
 	PacketManager pm_write;
 
-	char buffer[max_packet_size] = {};
+	int buffer_size = 0; //
+	char buffer[max_packet_size] = {}; //
 
 	TCPConnection(IPSocket s, IPEndpoint ep) {
 		socket = s;

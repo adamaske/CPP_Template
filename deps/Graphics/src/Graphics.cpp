@@ -41,7 +41,7 @@ Graphics::~Graphics() {
 
 }
 
-int Graphics::Init() {
+int Graphics::Init(std::string title) {
 
     if (glfwInit() != GLFW_TRUE) {
         Logger::Log(L_ERROR, "GLFW Init failed.");
@@ -54,8 +54,9 @@ int Graphics::Init() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    window = glfwCreateWindow(1280, 720, title.c_str(), nullptr, nullptr);
     if (!window) {
+        Logger::Log(L_ERROR, "Window creation failed.");
         return 0;
     }
 
@@ -83,54 +84,30 @@ int Graphics::Init() {
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
-    return 1;
-}
 
-int Graphics::Run() {
-    
-    while (!glfwWindowShouldClose(window))
-    {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        glfwPollEvents();
-
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        if (logger_window) {
-              logger_window->Render();
-        }
-
-        //Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-       // glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
+    if (Logger::GetOutputType() == L_GUI) {
+        AppendGUIWindow(std::make_shared<LoggerWindow>());
     }
 
-    Shutdown();
-
     return 1;
 }
 
-
-int Graphics::Render() {
-    if (glfwWindowShouldClose(window)) {
-        Shutdown();
+int Graphics::Frame() {
+    int result = Render();
+    if (result == 0) {
         return 0;
     }
-    glfwPollEvents();
 
+    return 1;
+}
+int Graphics::Render() {
+    if (glfwWindowShouldClose(window)) {
+        return 0;
+    }
+
+    int result = 0;
+
+    glfwPollEvents();
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -139,10 +116,11 @@ int Graphics::Render() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    if (logger_window) {
-        logger_window->Render();
+    for (auto gui_window : gui_windows) {
+        gui_window->Render();
     }
-    //Rendering
+
+
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -167,9 +145,7 @@ int Graphics::Shutdown() {
     return 1;
 }
 
-
-void Graphics::SetLoggerWindow(std::shared_ptr<LoggerWindow> logger) {
-
-    logger_window = logger;
+void Graphics::AppendGUIWindow(std::shared_ptr<GUIWindow> gui_window) {
+    gui_windows.push_back(gui_window);
 }
 

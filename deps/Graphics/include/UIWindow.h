@@ -1,5 +1,0 @@
-
-class UIWindow {
-
-	int Render();
-};

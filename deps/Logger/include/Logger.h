@@ -7,7 +7,6 @@
 #include <map>
 
 #include "LoggerConstants.h"
-#include "LoggerWindow.h"
 
 class Logger {
 public:
@@ -20,7 +19,10 @@ public:
 
 	static std::string LogToString(LogElement log);
 
-	static std::shared_ptr<LoggerWindow> GetWindow();
+	static void RegisterCallbackFunction(void(*callback)(LogElement log));
+
+	static LogOutput GetOutputType();
+
 private:
 	std::ofstream output_file;
 	LogLevel current_level = L_ALL;
@@ -33,9 +35,8 @@ private:
 													{L_DEBUG,	"[ DEBUG ]"},
 													{L_ALL,		"[ ALL   ]"} };
 
-	std::shared_ptr<LoggerWindow> logger_window = nullptr;
-
+	
 	std::vector<LogElement> logs;
 
-	
+	std::vector<void (*)(LogElement)> callbacks;
 };

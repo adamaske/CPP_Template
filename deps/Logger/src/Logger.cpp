@@ -12,8 +12,9 @@ static std::shared_ptr<Logger> logger_instance;
 
 Logger::~Logger() {
     if (current_output == L_FILE) {
-
-        output_file.close();
+        if (output_file.is_open()) {
+            output_file.close();
+        }
     }
 }
 
@@ -37,12 +38,10 @@ void Logger::Initalize(LogLevel level, LogOutput output)
         logger_instance->output_file = std::ofstream("log.txt");
         break;
     case L_GUI:
-        //Graphics -> Create a logg window
-        logger_instance->logger_window = std::make_shared<LoggerWindow>();
-
-        logger_instance->logger_window->Clear();
+        //Do nothing for now
         break;
     }
+
 }
 void Logger::Log(LogLevel level, std::string message)
 {
@@ -53,6 +52,7 @@ void Logger::Log(LogLevel level, std::string message)
     if (level != logger_instance->current_level && logger_instance->current_level != L_ALL) {
         return;
     }
+
     LogElement log = { Logger::GetDateTime(), level, message };
     
     switch (logger_instance->current_output) {
@@ -63,13 +63,15 @@ void Logger::Log(LogLevel level, std::string message)
         if (!logger_instance->output_file.is_open()) {
             break;
         }
-        logger_instance->output_file << Logger::LogToString(log) << std::endl;
+        logger_instance->output_file << Logger::LogToString(log) << "\n";
         break;
     case L_GUI:
-        //TODO : Init window
-
-        logger_instance->logger_window->AppendLog(log);
+        //logger_instance->logger_window->AppendLog(log);
         break;
+    }
+
+    for (auto& callback : logger_instance->callbacks) {
+        callback(log);
     }
 }
 
@@ -82,10 +84,15 @@ std::string Logger::GetDateTime() {
     return buf;
 }
 
+void Logger::RegisterCallbackFunction(void(*callback)(LogElement log)) {
+    logger_instance->callbacks.push_back(callback);
+};
+
+
 std::string Logger::LogToString(LogElement log) {
     return log.date_time + " " + logger_instance->level_text[log.level] + " : " + log.message;
 }
-std::shared_ptr<LoggerWindow>  Logger::GetWindow() {
-    return logger_instance->logger_window;
 
+LogOutput Logger::GetOutputType() {
+    return logger_instance->current_output;
 }

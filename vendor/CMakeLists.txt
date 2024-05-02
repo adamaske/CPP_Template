@@ -6,6 +6,8 @@ add_subdirectory(GLFW)
 add_subdirectory(GLAD)
 add_subdirectory(ImGUI)
 add_subdirectory(GLEW)
+add_subdirectory(JSON)
+add_subdirectory(SPDLOG)
 
 target_link_libraries(vendor INTERFACE
     Eigen
@@ -14,4 +16,6 @@ target_link_libraries(vendor INTERFACE
     GLAD
     GLEW
     ImGUI
+    JSON
+    SPDLOG
 )

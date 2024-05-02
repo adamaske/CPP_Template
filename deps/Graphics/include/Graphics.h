@@ -1,10 +1,13 @@
 #pragma once
-#include <memory>
-#include <vector>
-#include "LoggerWindow.h"
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include <memory>
+#include <vector>
+#include <string>
+
+#include "LoggerWindow.h"
+#include "GUIWindow.h"
 
 class Graphics {
 private:
@@ -15,17 +18,20 @@ private:
 
     std::shared_ptr<LoggerWindow> logger_window;
 
+    std::vector<std::shared_ptr<GUIWindow>> gui_windows;
 public:
 
     Graphics();
     ~Graphics();
 
-    int Init();
+    int Init(std::string title);
 
-    int Run();
+    int Frame();
+
     int Render();
 
     int Shutdown();
 
-    void SetLoggerWindow(std::shared_ptr<LoggerWindow> logger);
+    void AppendGUIWindow(std::shared_ptr<GUIWindow> gui_window);
+
 };

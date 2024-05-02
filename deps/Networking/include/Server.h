@@ -29,9 +29,11 @@ public:
 	// poll amount - how many interactions were requested
 	int Poll(WSAPOLLFD& listening_fd, std::vector<WSAPOLLFD>& fd_vector, int& poll_amount);
 
+	int Read(TCPConnection& tcp, WSAPOLLFD& fd);
 	//Return - Amount of bytes receieved
 	int Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
 
+	int Write(WSAPOLLFD fd, TCPConnection& tcp);
 	//Return - Amount of bytes sent
 	int Write(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp);
 

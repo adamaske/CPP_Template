@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include <spdlog/spdlog.h>
 
 Server::Server()
 {
@@ -51,7 +52,7 @@ int Server::Initialize(IPEndpoint endpoint) {
 int Server::Frame() {
 
 	WSAPOLLFD lfd;
-	std::vector<WSAPOLLFD> fds;
+	std::vector<WSAPOLLFD> fds; 
 	int poll_amount = 0;
 
 	int result = Poll(lfd, fds, poll_amount); //listen fd, connection fd, amount
@@ -73,28 +74,53 @@ int Server::Frame() {
 		}
 	}
 
-	for (int i = 0; i < connections.size(); i++) { //Disconnected connections with errors, 
-		if (to_disconnect.find(i) != to_disconnect.end()) {
-			connections[i].tcp.Close();
-			// Remove
-			OnDisconnect(connections[i].tcp, "Disconnected");
-			connections.erase(connections.begin() + i);
-		}
-	}
-	to_disconnect.clear();
+	//for (int i = 0; i < connections.size(); i++) { //Disconnected connections with errors, 
+	//	if (to_disconnect.find(i) != to_disconnect.end()) {
+	//		connections[i].tcp.Close();
+	//		// Remove
+	//		OnDisconnect(connections[i].tcp, "Disconnected");
+	//		connections.erase(connections.begin() + i);
+	//	}
+	//}
+	//to_disconnect.clear();
+	//
 
-	for (int i = 0; i < connections.size(); i++) { // Handle queded packets
-		PacketManager& pm = connections[i].tcp.pm_read;
-		while (pm.HasPendingPackets()) {
-			std::shared_ptr<Packet> front = pm.Retrieve();
-			int processed = ProcessPacket(front);
-			if (processed == 0) {
-				to_disconnect.insert({ i, true });
-				break;
-			}
-			pm.Pop();
+	for (int i = 0; i < fds.size(); i++) {
+		auto& tcp = connections[i].tcp;
+		auto& fd = fds[i];
+		char* buffer = tcp.buffer;
+		int buffer_size = tcp.buffer_size;
+
+		if (buffer_size == 0) {
+			continue;
 		}
+		
+		std::string buffer_string;
+		buffer_string.resize(buffer_size);
+		for (int i = 0; i < buffer_size; i++) {
+			buffer_string[i] = buffer[i];
+		}
+		
+		Logger::Log(L_INFO, "Server : " + buffer_string);
+
+		spdlog::info("Server : " + buffer_string);
+		//clear
+		*tcp.buffer = {};
+		tcp.buffer_size = 0;
 	}
+
+	//for (int i = 0; i < connections.size(); i++) { // Handle queded packets
+	//	PacketManager& pm = connections[i].tcp.pm_read;
+	//	while (pm.HasPendingPackets()) {
+	//		std::shared_ptr<Packet> front = pm.Retrieve();
+	//		int processed = ProcessPacket(front);
+	//		if (processed == 0) {
+	//			to_disconnect.insert({ i, true });
+	//			break;
+	//		}
+	//		pm.Pop();
+	//	}
+	//}
 
 	return 1;
 }
@@ -141,11 +167,11 @@ int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
 		return NETWORK_ERROR;
 	}
 
-	if (fd.revents & POLLRDNORM) {
-		int bytes_recieved = Read(fd, &pm_read, &tcp);
+	if (fd.revents & POLLRDNORM) { // Is there anything to read on this socket ? 
+		int bytes_recieved = Read(tcp, fd);
 
 		if (bytes_recieved == 0) {
-			Logger::Log(L_ERROR, "Server : Read error, 0 bytes receieved");
+			Logger::Log(L_ERROR, "Server : 0 bytes receiveed : Connec");
 			return NETWORK_ERROR;
 		}
 		if (bytes_recieved == WSAEWOULDBLOCK) {
@@ -157,43 +183,66 @@ int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
 			return NETWORK_ERROR;
 		}
 
-		pm_read.current_packet_extraction_offset += bytes_recieved;
 
-		if (pm_read.current_task == PacketManagerTask::ProcessPacketSize) {
+		if (false) {
 
-			if (pm_read.current_packet_extraction_offset == sizeof(uint16_t)) {
+			pm_read.current_packet_extraction_offset += bytes_recieved;
 
-				pm_read.current_packet_size = ntohs(pm_read.current_packet_size);
+			if (pm_read.current_task == PacketManagerTask::ProcessPacketSize) {
 
-				if (pm_read.current_packet_size > max_packet_size) {
-					Logger::Log(L_ERROR, "Server : Packet size exceeded MAX_PACKET_SIZE");
-					return NETWORK_ERROR;
+				if (pm_read.current_packet_extraction_offset == sizeof(uint16_t)) {
+
+					pm_read.current_packet_size = ntohs(pm_read.current_packet_size);
+
+					if (pm_read.current_packet_size > max_packet_size) {
+						Logger::Log(L_ERROR, "Server : Packet size exceeded MAX_PACKET_SIZE");
+						return NETWORK_ERROR;
+					}
+
+					pm_read.current_packet_extraction_offset = 0;
+					pm_read.current_task = PacketManagerTask::ProcessPacketContents;
 				}
-
-				pm_read.current_packet_extraction_offset = 0;
-				pm_read.current_task = PacketManagerTask::ProcessPacketContents;
 			}
-		}
-		else if (pm_read.current_task == PacketManagerTask::ProcessPacketContents) {
+			else if (pm_read.current_task == PacketManagerTask::ProcessPacketContents) {
 
-			std::shared_ptr<Packet> packet = std::make_shared<Packet>();
-			packet->buffer.resize(pm_read.current_packet_size);
-			memcpy(&packet->buffer[0], tcp.buffer, pm_read.current_packet_size);
+				std::shared_ptr<Packet> packet = std::make_shared<Packet>();
+				packet->buffer.resize(pm_read.current_packet_size);
+				memcpy(&packet->buffer[0], tcp.buffer, pm_read.current_packet_size);
 
-			pm_read.Append(packet);
+				pm_read.Append(packet);
 
-			pm_read.current_packet_size = 0;
-			pm_read.current_packet_extraction_offset = 0;
-			pm_read.current_task = PacketManagerTask::ProcessPacketSize;
+				pm_read.current_packet_size = 0;
+				pm_read.current_packet_extraction_offset = 0;
+				pm_read.current_task = PacketManagerTask::ProcessPacketSize;
+			}
 		}
 	}
 	
-	if (fd.revents & POLLWRNORM) {
+	if (fd.revents & POLLWRNORM) { // Is there anything to write on this socket?
 		int result = Write(fd, &pm_write, &tcp);
 
 	}
 
 	return NETWORK_SUCCESS;
+}
+
+int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
+	
+	int bytes_recieved = 0;
+	int result = tcp.socket.Recv(&tcp.buffer, max_packet_size, bytes_recieved);
+	tcp.buffer_size = bytes_recieved;
+
+	if (result == NETWORK_ERROR) {
+		Logger::Log(L_ERROR, "Recv result network error");
+		return NETWORK_ERROR;
+	}
+
+	return NETWORK_SUCCESS;
+}
+
+int Server::Write(WSAPOLLFD fd, TCPConnection& tcp) {
+
+	return 0;
 }
 
 int Server::Read(WSAPOLLFD fd, PacketManager* pm, TCPConnection* tcp) { //Return amount of bytes received
@@ -322,6 +371,6 @@ int Server::OnConnect(TCPConnection& connection) {
 }
 
 int Server::OnDisconnect(TCPConnection& connection, std::string reason) {
-	Logger::Log(L_INFO, "Server : " + connection.ToString() + " - Connection lost [" + reason + "]");
+	Logger::Log(L_INFO, "Server : Disconnected " + connection.ToString() + " - [" + reason + "]");
 	return 1;
 }

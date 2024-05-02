@@ -27,6 +27,12 @@ public:
 	}
 };
 
+class BytePacket {
+
+	uint32_t packet_size;
+	std::vector<char> buffer;
+};
+
 class Packet {
 public:
 
