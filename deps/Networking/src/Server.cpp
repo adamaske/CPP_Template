@@ -17,15 +17,8 @@ Server::~Server()
 }
 
 int Server::Initialize(IPEndpoint endpoint) {
-	int result = Networking::Intialize();
-	if (result != 1) {
-		//Something is wrong
-		spdlog::error( "Server : Failed to initalize... ");
-		return NETWORK_ERROR;
-	}
-
 	listen_socket = IPSocket();
-	result = listen_socket.Create();
+	int result = listen_socket.Create();
 	if (result == NETWORK_ERROR) {
 		spdlog::error( "Server : Failed to create socket...");
 		return NETWORK_ERROR;
@@ -64,34 +57,37 @@ int Server::Frame() {
 	std::map<int, bool> to_disconnect; // index, disconnect
 	//For every file descriptor polled 
 	for (int i = 0; i < use_fds.size(); i++) { // Read data in packetmanagers
-		result = ServiceConnection(tcps[i], use_fds[i]);
+		auto tcp = tcps[i];
+		auto fd = use_fds[i];
+		result = ServiceConnection(tcp, fd);
 		if (result == NETWORK_ERROR) {
 			to_disconnect.insert({ i, true });
-			spdlog::debug( "Server : " + tcps[i].ToString() + "will disconnect.");
 			continue;
 		}
 	}
 
 	for (int i = 0; i < use_fds.size(); i++) { //Disconnected connections with errors, 
 		if (to_disconnect.find(i) != to_disconnect.end()) {
-
-			tcps[i].Close();
-			OnDisconnect(tcps[i], "Unknown.");
+			auto tcp = tcps[i];
+			auto fd = use_fds[i];
+			tcp->Close();
+			OnDisconnect(tcp, "Unknown.");
 
 			tcps.erase(tcps.begin() + i);
 			master_fds.erase(master_fds.begin() + i);
 		}
 	}
-	to_disconnect.clear();
 
 	for (int i = 0; i < tcps.size(); i++) {
-		auto pm = &tcps[i].pm_read;
+		auto tcp = tcps[i];
+		auto pm = &tcp->pm_read;
 
 		if (pm->HasPendingPackets()) {
 			auto packet = pm->Retrieve();
-			ProcessPacket(packet);
-			pm->Pop();
 
+			ProcessPacket(packet);
+
+			pm->Pop();
 		}
 	}
 	return NETWORK_SUCCESS;
@@ -144,21 +140,19 @@ int Server::AcceptConnections(WSAPOLLFD fd) {
 	accepted_fd.revents = 0;
 
 	master_fds.push_back(accepted_fd);
-	tcps.push_back(TCPConnection(connected_socket, connected_endpoint));
-	std::shared_ptr<Packet> int_packet = std::make_shared<Packet>(IntegerArray);
-	*int_packet << uint32_t(3) << uint32_t(4) << uint32_t(5);
+	std::shared_ptr<TCPConnection> tcp = std::make_shared<TCPConnection>(connected_socket, connected_endpoint);
+	tcps.push_back(tcp);
 
-	std::shared_ptr<Packet> string_packet = std::make_shared<Packet>(String);
-	*string_packet << std::string("Welcome to server!");
+	std::shared_ptr<Packet> welcome = std::make_shared<Packet>(String);
+	*welcome << std::string("Welcome to server connection.");
 
-	//tcps[tcps.size() - 1].pm_write.Append(int_packet);
-	tcps[tcps.size() - 1].pm_write.Append(string_packet);
+	tcp->pm_write.Append(welcome);
 
-	OnConnect(tcps[tcps.size() - 1]);   
+	OnConnect(tcp);   
 	return NETWORK_SUCCESS;
 }
 
-int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
+int Server::ServiceConnection(std::shared_ptr<TCPConnection> tcp, WSAPOLLFD& fd) {
 	if (fd.revents & POLLERR) {//Nothing to read
 		spdlog::error("Server : POLLERR");
 		return NETWORK_ERROR;
@@ -173,8 +167,8 @@ int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
 	}
 
 	if (fd.revents & POLLRDNORM) { // Is there anything to read on this socket ? 
-		int bytes_recieved = Read(tcp, fd);
-		if (bytes_recieved == NETWORK_ERROR) { 
+		int result = Read(tcp, fd);
+		if (result == NETWORK_ERROR) {
 			return NETWORK_ERROR;
 		}
 	}
@@ -189,12 +183,12 @@ int Server::ServiceConnection(TCPConnection& tcp, WSAPOLLFD& fd) {
 	return NETWORK_SUCCESS;
 }
 
-int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
+int Server::Read(std::shared_ptr<TCPConnection> tcp, WSAPOLLFD& fd) {
 
 	if (!use_packets) {
-		int result = tcp.socket.Recv(&tcp.read_buffer, MAX_PACKET_SIZE, tcp.read_buffer_size);
+		int result = tcp->socket.Recv(&tcp->buffer, MAX_PACKET_SIZE, tcp->buffer_size);
 		if (result == 0) {
-			spdlog::info("Server : " + tcp.ToString() + " - Connection closed.");
+			spdlog::info("Server : " + tcp->ToString() + " - Connection closed.");
 			return NETWORK_ERROR;
 		}
 		if (result == NETWORK_ERROR) {
@@ -202,12 +196,12 @@ int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
 			return NETWORK_ERROR;
 		}
 
-		spdlog::debug("Server : " + tcp.ToString() + " - Recieved " + std::to_string(tcp.read_buffer_size) + " bytes");
+		spdlog::debug("Server : " + tcp->ToString() + " - Recieved " + std::to_string(tcp->buffer_size) + " bytes");
 		return NETWORK_SUCCESS;
 	}
 
 	int bytes_recieved = 0;
-	PacketManager* pm = &tcp.pm_read;
+	PacketManager* pm = &tcp->pm_read;
 	
 	if (pm->current_task == ProcessPacketSize) { 
 		// When reading the packet size we fill the packet size variable, 
@@ -226,10 +220,10 @@ int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
 		// so if we've already read 6 bytes, then we want to start the fill at byte 7 [6]
 		// and the size of the remaining packet is packet_size - 6 bytes
 		bytes_recieved = recv(	fd.fd, 
-								(char*)&tcp.read_buffer + pm->current_extraction_offset, 
+								(char*)&tcp->buffer + pm->current_extraction_offset, 
 								pm->current_packet_size - pm->current_extraction_offset, 0);
 	}
-	spdlog::debug("Server : " + tcp.ToString() + " - " + std::to_string(bytes_recieved) + " bytes recieved");
+	spdlog::debug("Server : " + tcp->ToString() + " - " + std::to_string(bytes_recieved) + " bytes recieved");
 
 	if (bytes_recieved == 0) { //Closed connection
 		//spdlog::info("Server : " + tcp.ToString() + " - Connection was closed.");
@@ -260,7 +254,7 @@ int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
 		pm->current_packet_size = ntohl(pm->current_packet_size);
 
 		if (pm->current_packet_size > MAX_PACKET_SIZE) { // Check packet size
-			spdlog::error("Server :" + tcp.ToString() + " - Packet size exceeded MAX_PACKET_SIZE " + std::to_string(pm->current_packet_size));
+			spdlog::error("Server :" + tcp->ToString() + " - Packet size exceeded MAX_PACKET_SIZE " + std::to_string(pm->current_packet_size));
 			return NETWORK_ERROR;
 		}
 		// The packet size was successfully read, 
@@ -284,7 +278,7 @@ int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
 		// So we want to fill the new packet' buffer with those contents
 		
 		packet->buffer.resize(pm->current_packet_size);
-		memcpy(&packet->buffer[0], tcp.read_buffer, pm->current_packet_size);
+		memcpy(&packet->buffer[0], tcp->buffer, pm->current_packet_size);
 
 		//The packet is complete, add it to the queue
 		pm->Append(packet);
@@ -300,22 +294,22 @@ int Server::Read(TCPConnection& tcp, WSAPOLLFD& fd) {
 	return NETWORK_SUCCESS;
 }
 
-int Server::Write(TCPConnection& tcp, WSAPOLLFD fd) {
+int Server::Write(std::shared_ptr<TCPConnection> tcp, WSAPOLLFD fd) {
 	if (!use_packets) {
 		int bytes_sent = 0;
-		int result = tcp.socket.Send(&tcp.write_buffer, tcp.write_buffer_size, bytes_sent);
+		int result = tcp->socket.Send(&tcp->buffer, tcp->buffer_size, bytes_sent);
 
 		if (result == NETWORK_ERROR) {
 			spdlog::error("Server : Sending error : " + std::to_string(WSAGetLastError()));
 			return NETWORK_ERROR;
 		}
 
-		spdlog::debug("Server : " + tcp.ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
+		spdlog::debug("Server : " + tcp->ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
 		return NETWORK_SUCCESS;
 	}
 
 	int bytes_sent = 0;
-	PacketManager* pm = &tcp.pm_write;
+	PacketManager* pm = &tcp->pm_write;
 
 	if (!pm->HasPendingPackets()) { //Dont have any queued packets
 		return NETWORK_SUCCESS;
@@ -334,7 +328,7 @@ int Server::Write(TCPConnection& tcp, WSAPOLLFD fd) {
 							0);
 		
 		if (bytes_sent == SOCKET_ERROR) {
-			spdlog::error("Server : " + tcp.ToString() + " - Sending packet size " + std::to_string(pm->current_packet_size) + " error : " + std::to_string(WSAGetLastError()));
+			spdlog::error("Server : " + tcp->ToString() + " - Sending packet size " + std::to_string(pm->current_packet_size) + " error : " + std::to_string(WSAGetLastError()));
 			return NETWORK_ERROR;
 		}
 
@@ -342,7 +336,7 @@ int Server::Write(TCPConnection& tcp, WSAPOLLFD fd) {
 			return NETWORK_SUCCESS;
 		}
 
-		spdlog::debug("Server : " + tcp.ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
+		spdlog::debug("Server : " + tcp->ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
 		pm->current_extraction_offset += bytes_sent;
 
 		//if we  sent all the packet_size bytes, then continue to sending the contents
@@ -363,7 +357,7 @@ int Server::Write(TCPConnection& tcp, WSAPOLLFD fd) {
 			0);
 
 		if (bytes_sent == SOCKET_ERROR) {
-			spdlog::error("Server : " + tcp.ToString() + " - Sending packet contents error : " + std::to_string(WSAGetLastError()));
+			spdlog::error("Server : " + tcp->ToString() + " - Sending packet contents error : " + std::to_string(WSAGetLastError()));
 			return NETWORK_ERROR;
 		}
 
@@ -371,7 +365,7 @@ int Server::Write(TCPConnection& tcp, WSAPOLLFD fd) {
 			return NETWORK_SUCCESS;
 		}
 
-		spdlog::debug("Server : " + tcp.ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
+		spdlog::debug("Server : " + tcp->ToString() + " - Sent " + std::to_string(bytes_sent) + " bytes");
 		pm->current_extraction_offset += bytes_sent;
 		//Did we send all the bytes of the packet contents ? 
 		if (pm->current_extraction_offset != pm->current_packet_size) {
@@ -426,12 +420,13 @@ int Server::ProcessPacket(std::shared_ptr<Packet> packet) {
 	return NETWORK_SUCCESS;
 }
 
-int Server::OnConnect(TCPConnection& connection) {
-	spdlog::info("Server : " + connection.ToString() + " - New connection accepted.");
+int Server::OnConnect(std::shared_ptr<TCPConnection> connection) {
+	spdlog::info("Server : " + connection->ToString() + " - New connection accepted.");
 	return 1;
 }
 
-int Server::OnDisconnect(TCPConnection& connection, std::string reason) {
-	spdlog::info( "Server : " + connection.ToString() + " - Disconnected.");
+int Server::OnDisconnect(std::shared_ptr<TCPConnection> connection, std::string reason) {
+	spdlog::info( "Server : " + connection->ToString() + " - Disconnected.");
 	return 1;
 }
+

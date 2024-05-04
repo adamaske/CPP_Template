@@ -9,12 +9,11 @@ public:
     ~Client();
     
     int Connect(IPEndpoint endpoint);
-    bool IsConnected();
     int Frame();
 
     int Run(IPEndpoint endpoint, bool* running);
-    void Start();
 
+    bool IsConnected();
 private:
     IPSocket ip_socket;
     bool is_connected = false;

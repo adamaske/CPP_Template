@@ -67,7 +67,3 @@ int Client::Run(IPEndpoint endpoint, bool* running) {
 
 	return 1;
 }
-
-void Client::Start(){
-    std::cout << "Client start\n";
-}
