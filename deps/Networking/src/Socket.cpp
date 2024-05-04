@@ -201,7 +201,7 @@ int IPSocket::Recv(Packet& packet) {
 
 	uint16_t buffer_size = ntohs(encoded_size);
 
-	if (buffer_size > max_packet_size) {
+	if (buffer_size > MAX_PACKET_SIZE) {
 		spdlog::error( "Socket : Recv buffer size exeeded max_packet : " + buffer_size);
 		return NETWORK_ERROR;
 	}

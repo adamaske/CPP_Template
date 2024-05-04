@@ -13,48 +13,54 @@ TODO LINKS TO THIRD PARTIES
 	- [Logger](#logger)
 
 ## Usage
-
+ 
 main.cpp
 ```c++
 #include "Config.h"
 
 #include "Core.h"
+
 #include "Graphics.h"
-#include "Logger.h"
 
 #include "Networking.h"
 #include "Server.h"
 #include "Client.h"
 
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+
+void InitLogger() {
+    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("Main");
+    spdlog::set_default_logger(logger);
+
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>(); //Console printing
+    logger->sinks().push_back(console_sink);
+}
+
 int main(int argc, char* argv[]){
-    Logger::Initalize(L_ALL, L_GUI);
+    InitLogger();
     Networking::Intialize();
 
-    spdlog::info( "TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
 
     Graphics graphics;
-    graphics.SetLoggerWindow(Logger::GetWindow());
-    graphics.Init();
+    graphics.Init("Template");
 
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
     
-    Client client;
-    bool client_run = true;
-    std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
-    
     int result = 1;
     while (result) {
+
         server.Frame(); //Runs the server
         result = graphics.Render(); //return 0 when window closes
     }
 
-    client_thread.join();
-
-    //client_run = false;
+    graphics.Shutdown();
     Networking::Shutdown();
     return 0;
 }
+
 ```
 
 ## Building
@@ -86,7 +92,10 @@ Several static libaries are implemented in deps/.
 
 
 ## Networking
-Simple static library implementing a IPv4 non-blocking send and recieve server.
+IPv4 TCP server static library. The server is non-blocking and uses packets. 
+Scripts/tcp_client.py implements a simple client with packet parsing and creation. 
+
+Server::use_packets changes bevhaiour to raw read and writing. 
 
 - Server
 ```cpp
@@ -94,42 +103,22 @@ Simple static library implementing a IPv4 non-blocking send and recieve server.
 
 Server server;
 server.Initialize(IPEndpoint("localhost", 8000));
-server.SetPacketParsingCallback() - NOT IMPLEMENTED
 while(true){
     server.Frame();
 }
 ```
 - Client
-The client is blocking, thus run it in a thread. Setting the bool to false closes the client.
-```cpp
-Client client;
-bool client_run = true;
-std::thread client_thread(&Client::Run, &client, IPEndpoint("localhost", 8000), &client_run);
-```   
+TODO : Non blocking client
+Scripts/tcp_client.py implements a simple client with string-packet parsing and creation. 
 
 ## Graphics
-Graphics is a static library with OpenGL, GLM, and ImGUI functionality. 
+Graphics is a static library utilizing OpenGL-GLFW, GLM, and ImGUI.
 ```cpp
 Graphics graphics;
-graphics.Init;
+graphics.Init("Template");
 while(true){
     server.Render();
 }
 ```
 
-## Core
-Core is a static library
-To do: Genric JSON parsing
 
-## Logger
-A simple logger, use spdlog for GUI callback.
-Usage:
-```cpp
-#include "Logger.h"
-
-Logger::Initalize(L_ALL, L_CONSOLE); //Call before usage
-
-Logger::Log( L_ERROR, "Reason" );
-Logger::Log( L_INFO, "Reason" );
-Logger::Log( L_DEBUG, "Reason" );
-```

@@ -8,10 +8,14 @@ struct TCPConnection {
 	IPEndpoint endpoint;
 
 	int read_buffer_size = 0; //
-	char read_buffer[max_packet_size] = {}; //
+	char read_buffer[MAX_PACKET_SIZE] = {}; //
 
 	int write_buffer_size = 0;
-	char write_buffer[max_packet_size] = {};
+	char write_buffer[MAX_PACKET_SIZE] = {};
+
+	//Wrappers for packet queues
+	PacketManager pm_read; 
+	PacketManager pm_write;
 
 	TCPConnection(IPSocket s, IPEndpoint ep) {
 		socket = s;
