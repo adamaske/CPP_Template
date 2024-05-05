@@ -19,7 +19,11 @@ void InitLogger() {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>(); //Console printing
     logger->sinks().push_back(console_sink);
 }
-
+enum TestEnum {
+    first,
+    second, 
+    third
+};
 
 int main(int argc, char* argv[]){
     InitLogger();

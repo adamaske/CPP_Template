@@ -10,12 +10,12 @@ Packet::Packet(PacketType type) {
 
 PacketType Packet::GetPacketType() {
 	PacketType* packet_type_ptr = reinterpret_cast<PacketType*>(&buffer[0]);
-	return static_cast<PacketType>(ntohs(*packet_type_ptr)); //Convert to host-byte-order
+	return static_cast<PacketType>(ntohl(*packet_type_ptr)); //Convert to host-byte-order
 }
 
 void Packet::AssignPacketType(PacketType packet_type) {
 	PacketType* packet_type_ptr = reinterpret_cast<PacketType*>(&buffer[0]);  //Look at the first 4 bytes as a packettype
-	*packet_type_ptr = static_cast<PacketType>(htons(packet_type)); //Value of the pointer = PacketConvert to network-byte-order
+	*packet_type_ptr = static_cast<PacketType>(htonl(packet_type)); //Value of the pointer = PacketConvert to network-byte-order
 }
 
 void Packet::Clear() {
@@ -32,7 +32,7 @@ void Packet::Append(const void* data, uint32_t size) {
 }
 
 Packet& Packet::operator << (uint32_t data) {
-	data = htons(data);
+	data = htonl(data);
 	Append(&data, sizeof(uint32_t));
 	return *this;
 }
@@ -42,9 +42,9 @@ Packet& Packet::operator >> (uint32_t& data) {
 		throw PacketExecption("[Packet::operator >>(uint32_t &)] - Extraction offset exceeds buffer size.");
 	}
 	data = *reinterpret_cast<uint32_t*>(&buffer[extraction_offset]);// derefrence Look at buffer[e_o] as a uint32_t-poiner
-	data = ntohs(data); //this 
+	data = ntohl(data); //this 
 
-	extraction_offset += sizeof(uint16_t); //4 + 4 = 8 -> 
+	extraction_offset += sizeof(uint32_t); //4 + 4 = 8 -> 
 	return *this;
 }
 

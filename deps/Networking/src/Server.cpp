@@ -145,7 +145,6 @@ int Server::AcceptConnections(WSAPOLLFD fd) {
 
 	std::shared_ptr<Packet> welcome = std::make_shared<Packet>(String);
 	*welcome << std::string("Welcome to server connection.");
-
 	tcp->pm_write.Append(welcome);
 
 	OnConnect(tcp);   
@@ -320,13 +319,14 @@ int Server::Write(std::shared_ptr<TCPConnection> tcp, WSAPOLLFD fd) {
 
 		//First we must send the packet size 
 		pm->current_packet_size = packet->buffer.size();
-		uint16_t network_order_packet_size = htons(pm->current_packet_size);
+
+		uint32_t network_order_packet_size = htonl(pm->current_packet_size);
 		//Account for the possiblity of not sending all bytes at once with the extraction offset
 		bytes_sent = send(	fd.fd,
 							(char*)&network_order_packet_size + pm->current_extraction_offset,
-							sizeof(uint16_t) - pm->current_extraction_offset, 
+							sizeof(uint32_t) - pm->current_extraction_offset,
 							0);
-		
+
 		if (bytes_sent == SOCKET_ERROR) {
 			spdlog::error("Server : " + tcp->ToString() + " - Sending packet size " + std::to_string(pm->current_packet_size) + " error : " + std::to_string(WSAGetLastError()));
 			return NETWORK_ERROR;
@@ -340,7 +340,7 @@ int Server::Write(std::shared_ptr<TCPConnection> tcp, WSAPOLLFD fd) {
 		pm->current_extraction_offset += bytes_sent;
 
 		//if we  sent all the packet_size bytes, then continue to sending the contents
-		if (pm->current_extraction_offset != sizeof(uint16_t)) {
+		if (pm->current_extraction_offset != sizeof(uint32_t)) {
 			return NETWORK_SUCCESS;
 		}
 		pm->current_extraction_offset = 0;
@@ -391,7 +391,7 @@ int Server::ProcessPacket(std::shared_ptr<Packet> packet) {
 	{
 		std::string msg = {};
 		*packet >> msg;
-		spdlog::error("STRING PACKET : " + msg);
+		spdlog::info("STRING PACKET : " + msg);
 		break;
 		}
 	case IntegerArray: 

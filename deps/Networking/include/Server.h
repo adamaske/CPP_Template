@@ -43,7 +43,7 @@ class TestServer : public Server {
 private:
 
 
-	int ProcessPacket(std::shared_ptr<Packet> packet) override;
-	int OnConnect(std::shared_ptr<TCPConnection> connection) override;
-	int OnDisconnect(std::shared_ptr<TCPConnection> connection, std::string reason) override;
+	//int ProcessPacket(std::shared_ptr<Packet> packet) override;
+	//int OnConnect(std::shared_ptr<TCPConnection> connection) override;
+	//int OnDisconnect(std::shared_ptr<TCPConnection> connection, std::string reason) override;
 };
