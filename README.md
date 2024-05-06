@@ -10,9 +10,9 @@ TODO Change structre for easier git submodule
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
--[Third-Party Packages](#Third-Party Packages)
+-[Third-Party Packages](#thirdpartypackages)
 
-## Usage
+# Usage
  
 main.cpp
 ```c++
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]){
 
 ```
 
-## Building
+# Building
 Cmake must be installed for building the project. 
 scripts/generate.bat can automatically build the project with cmake 
 ```bash
@@ -73,12 +73,12 @@ cmake ..
 cmake --build .
 ```
 
-## Running
+# Running
 ```bash
 ./src/VERSION/Template.exe
 ```
 
-## Configuration
+# Configuration
 Make it your own by configuring it.
 
 CMakeLists.txt : `project(YOUR_PROJECT_NAME_HERE)`
@@ -86,7 +86,7 @@ src/config.h.in :
 `#define YOUR_PROJECT_NAME_VERSION_MAJOR @YOUR_PROJECT_NAME_VERSION_MAJOR@` and
 `#define YOUR_PROJECT_NAME_VERSION_MINOR @YOUR_PROJECT_NAME_VERSION_MINOR@`
 
-## Modules
+# Modules
 Several static libaries are implemented in deps/.
 
 
@@ -121,10 +121,9 @@ while(true){
 }
 ```
 
-## Third-Party Packages
+# Third-Party Packages
 
 -[Spdlog C++ Logger](https://github.com/gabime/spdlog)
-
 -[NLOHMANN C++ JSON](https://github.com/nlohmann/json)
 -[GLFW](https://www.glfw.org/)
 -[GLM](https://github.com/g-truc/glm)
