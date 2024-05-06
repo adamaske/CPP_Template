@@ -124,10 +124,17 @@ while(true){
 # Third-Party Packages
 
 -[Spdlog C++ Logger](https://github.com/gabime/spdlog)
+
 -[NLOHMANN C++ JSON](https://github.com/nlohmann/json)
+
 -[GLFW](https://www.glfw.org/)
+
 -[GLM](https://github.com/g-truc/glm)
+
 -[ImGui](https://github.com/ocornut/imgui)
+
 -[Eigen C++ Math](https://gitlab.com/libeigen/eigen)
+
 -[GLAD](https://github.com/Dav1dde/glad)
+
 -[GLEW](https://github.com/nigels-com/glew)
