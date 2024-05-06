@@ -6,7 +6,7 @@ This is a C++ library. It implements some generic functionality for fast startup
 [] UE5 plugin for server interfacing
 [] Research plotting libraries
 [] Change vendor subfolder to git submodules (keep the manual ones by renaming vendor to old_vendor)
-[] 
+[] IPv6 networking
 
 - [Building](#building)
 - [Running](#running)
