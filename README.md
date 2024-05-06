@@ -1,8 +1,8 @@
 # CPP_Template
 This is a C++ template project. It implements some generic functionality for fast startup of new projects of different kinds. 
 
-The vendor folder contains third-party packages : GLFW, IMGUI, GLAD, GLEW, EIGEM, GLM, SPDLOG, NLOHMANN/JSON, 
-TODO LINKS TO THIRD PARTIES
+TODO Change structre for easier git submodule
+
 - [Building](#building)
 - [Running](#running)
 - [Configuration](#configuration)
@@ -10,7 +10,7 @@ TODO LINKS TO THIRD PARTIES
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
-	- [Logger](#logger)
+-[Third-Party](#thirdparty)
 
 ## Usage
  
@@ -121,4 +121,13 @@ while(true){
 }
 ```
 
+## Third-Party Packages
 
+[Spdlog C++ Logger](https://github.com/gabime/spdlog)
+[NLOHMANN C++ JSON](https://github.com/nlohmann/json)
+[GLFW](https://www.glfw.org/)
+[GLM](https://github.com/g-truc/glm)
+[ImGui](https://github.com/ocornut/imgui)
+[Eigen C++ Math](https://gitlab.com/libeigen/eigen)
+[GLAD](https://github.com/Dav1dde/glad)
+[GLEW](https://github.com/nigels-com/glew)
