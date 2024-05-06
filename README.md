@@ -15,7 +15,7 @@ This is a C++ library. It implements some generic functionality for fast startup
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
-- [Third-Party Packages](#thirdpartypackages)
+- [Third-Party Packages](#third-party-packages)
 
 # Usage
  
