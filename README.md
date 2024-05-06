@@ -1,7 +1,12 @@
 # CPP_Template
-This is a C++ template project. It implements some generic functionality for fast startup of new projects of different kinds. 
+This is a C++ library. It implements some generic functionality for fast startup of new projects of different kinds. 
 
-TODO Change structre for easier git submodule
+#TODO
+[] Change toplevel CMakeLists for submodule usage
+[] UE5 plugin for server interfacing
+[] Research plotting libraries
+[] Change vendor subfolder to git submodules (keep the manual ones by renaming vendor to old_vendor)
+[] 
 
 - [Building](#building)
 - [Running](#running)
@@ -10,7 +15,7 @@ TODO Change structre for easier git submodule
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
--[Third-Party Packages](#thirdpartypackages)
+- [Third-Party Packages](#thirdpartypackages)
 
 # Usage
  
