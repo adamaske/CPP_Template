@@ -10,15 +10,13 @@ int main(int argc, char* argv[]){
     Logger::Initalize(Logger::L_INFO, Logger::L_CONSOLE);
     Networking::Intialize();
 
-    Logger::Info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    Logger::Info("Fundamentum VERSION " + std::to_string(Fundamentum_VERSION_MAJOR) + "." + std::to_string(Fundamentum_VERSION_MINOR));
     
     Graphics graphics;
-    graphics.Init("Template");
+    graphics.Init("Fundamentum");
 
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
-
-
 
     int result = 1;
     while (result) {

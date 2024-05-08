@@ -1,4 +1,4 @@
 // the configured options and settings for Tutorial
-#define Template_VERSION_MAJOR @Template_VERSION_MAJOR@
-#define Template_VERSION_MINOR @Template_VERSION_MINOR@
+#define Fundamentum_VERSION_MAJOR @Fundamentum_VERSION_MAJOR@
+#define Fundamentum_VERSION_MINOR @Fundamentum_VERSION_MINOR@
 
