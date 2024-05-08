@@ -16,6 +16,7 @@ public:
 
 	void Clear();
 
+
 	ImGuiTextBuffer     buf;
 	ImGuiTextFilter     filter;
 	ImVector<int>       line_offsets;        // Index to lines offset

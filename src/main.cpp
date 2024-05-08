@@ -8,28 +8,18 @@
 #include "Server.h"
 #include "Client.h"
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include "Logger.h"
 
-
-void InitLogger() {
-    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("Main");
-    spdlog::set_default_logger(logger);
-
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>(); //Console printing
-    logger->sinks().push_back(console_sink);
-}
-enum TestEnum {
-    first,
-    second, 
-    third
-};
-
-int main(int argc, char* argv[]){
-    InitLogger();
+int main(int argc, char* argv[]){  
+    Logger::Initalize(Logger::L_INFO, Logger::L_CONSOLE);
     Networking::Intialize();
 
-    spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    Logger::Info("Hei");
+
+    return 0;
+    Logger::Info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    //spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    
 
     Graphics graphics;
     graphics.Init("Template");

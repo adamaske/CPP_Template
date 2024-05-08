@@ -110,7 +110,6 @@ int Graphics::Render() {
 
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -119,12 +118,16 @@ int Graphics::Render() {
         gui_window->Render();
     }
 
+    auto r = clear_color.x;
+    auto g = clear_color.y;
+    auto b = clear_color.z;
+    auto alpha = clear_color.w;
 
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClearColor(r * alpha, g * alpha, b * alpha, alpha);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

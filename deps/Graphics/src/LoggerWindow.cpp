@@ -2,35 +2,22 @@
 
 #include <iostream>
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/callback_sink.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
-
-
+#include "Logger.h"
 void LoggerWindow::LoggerWindowCallback() {
    
 }
 
 LoggerWindow::LoggerWindow() {
-    auto callback_sink = std::make_shared<spdlog::sinks::callback_sink_mt>
-        ([this](const spdlog::details::log_msg& msg) {
-        
-        auto time_point = msg.time;
-        std::time_t time = std::chrono::system_clock::to_time_t(time_point);
-        std::string time_string = std::ctime(&time);
-        time_string.resize(time_string.size() - 1);
 
-        std::string level_string(spdlog::level::to_short_c_str(msg.level));
-        std::string payload_string(msg.payload.data());
-        std::string text = "[" + level_string + "] " + payload_string + "\n";
+    Logger::RegisterCallback([this](const Logger::Log log) {
 
+        std::string text = log.payload;
+    
         va_list args = { };
         buf.appendfv(text.c_str(), args);
-
+    
         scroll_to_bottom = true;
     });
-    //callback_sink->set_level(spdlog::level::info);
-    spdlog::get("Main")->sinks().push_back(callback_sink);
 }
 
 int LoggerWindow::Render()

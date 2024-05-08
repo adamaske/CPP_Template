@@ -6,4 +6,4 @@ add_library(Networking STATIC ${SRCS})
 target_include_directories(Networking PUBLIC
 ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(Networking PRIVATE SPDLOG)
+target_link_libraries(Networking PRIVATE SPDLOG Logger)
