@@ -1,8 +1,14 @@
 # CPP_Template
-This is a C++ template project. It implements some generic functionality for fast startup of new projects of different kinds. 
+This is a C++ library. It implements some generic functionality for fast startup of new projects of different kinds. 
 
-The vendor folder contains third-party packages : GLFW, IMGUI, GLAD, GLEW, EIGEM, GLM, SPDLOG, NLOHMANN/JSON, 
-TODO LINKS TO THIRD PARTIES
+# TODO
+- [ ] Change toplevel CMakeLists for submodule usage
+- [ ] UE5 plugin for server interfacing
+- [ ] Research plotting libraries
+- [ ] Change vendor subfolder to git submodules (keep the manual ones by renaming vendor to old_vendor)
+- [ ] IPv6 networking
+
+# Content
 - [Building](#building)
 - [Running](#running)
 - [Configuration](#configuration)
@@ -10,9 +16,9 @@ TODO LINKS TO THIRD PARTIES
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
-	- [Logger](#logger)
+- [Third-Party Packages](#third-party-packages)
 
-## Usage
+# Usage
  
 main.cpp
 ```c++
@@ -63,7 +69,7 @@ int main(int argc, char* argv[]){
 
 ```
 
-## Building
+# Building
 Cmake must be installed for building the project. 
 scripts/generate.bat can automatically build the project with cmake 
 ```bash
@@ -73,12 +79,12 @@ cmake ..
 cmake --build .
 ```
 
-## Running
+# Running
 ```bash
 ./src/VERSION/Template.exe
 ```
 
-## Configuration
+# Configuration
 Make it your own by configuring it.
 
 CMakeLists.txt : `project(YOUR_PROJECT_NAME_HERE)`
@@ -86,7 +92,7 @@ src/config.h.in :
 `#define YOUR_PROJECT_NAME_VERSION_MAJOR @YOUR_PROJECT_NAME_VERSION_MAJOR@` and
 `#define YOUR_PROJECT_NAME_VERSION_MINOR @YOUR_PROJECT_NAME_VERSION_MINOR@`
 
-## Modules
+# Modules
 Several static libaries are implemented in deps/.
 
 
@@ -121,4 +127,20 @@ while(true){
 }
 ```
 
+# Third-Party Packages
 
+- [Spdlog C++ Logger](https://github.com/gabime/spdlog)
+
+- [NLOHMANN C++ JSON](https://github.com/nlohmann/json)
+
+- [GLFW](https://www.glfw.org/)
+
+- [GLM](https://github.com/g-truc/glm)
+
+- [ImGui](https://github.com/ocornut/imgui)
+
+- [Eigen C++ Math](https://gitlab.com/libeigen/eigen)
+
+- [GLAD](https://github.com/Dav1dde/glad)
+
+- [GLEW](https://github.com/nigels-com/glew)
