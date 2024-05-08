@@ -1,5 +1,5 @@
-# CPP_Template
-This is a C++ library. It implements some generic functionality for fast startup of new projects of different kinds. 
+# Fundamentum
+Fundamentum is a C++ library for fast startup of new projects.  
 
 # TODO
 - [ ] Change toplevel CMakeLists for submodule usage
