@@ -18,11 +18,6 @@ int main(int argc, char* argv[]){
     Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
 
-    Client client;
-    client.Connect(IPEndpoint("localhost", 12345));
-    while (true) {
-        client.Frame();
-    }
 
 
     int result = 1;
@@ -31,7 +26,6 @@ int main(int argc, char* argv[]){
         server.Frame(); //Runs the server
         result = graphics.Render(); //return 0 when window closes
 
-        Sleep(500);
     }
 
     graphics.Shutdown();
