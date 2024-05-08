@@ -1,31 +1,29 @@
 #include "Config.h"
-
 #include "Core.h"
-
+#include "Logger.h"
 #include "Graphics.h"
-
 #include "Networking.h"
 #include "Server.h"
 #include "Client.h"
-
-#include "Logger.h"
 
 int main(int argc, char* argv[]){  
     Logger::Initalize(Logger::L_INFO, Logger::L_CONSOLE);
     Networking::Intialize();
 
-    Logger::Info("Hei");
-
-    return 0;
     Logger::Info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
-    //spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
     
-
     Graphics graphics;
     graphics.Init("Template");
 
-    TestServer server;
+    Server server;
     server.Initialize(IPEndpoint("localhost", 8000));
+
+    Client client;
+    client.Connect(IPEndpoint("localhost", 12345));
+    while (true) {
+        client.Frame();
+    }
+
 
     int result = 1;
     while (result) {

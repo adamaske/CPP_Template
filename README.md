@@ -6,7 +6,6 @@ This is a C++ library. It implements some generic functionality for fast startup
 - [ ] UE5 plugin for server interfacing
 - [ ] Research plotting libraries
 - [ ] Change vendor subfolder to git submodules (keep the manual ones by renaming vendor to old_vendor)
-- [ ] IPv6 networking
 
 # Content
 - [Building](#building)
@@ -16,6 +15,7 @@ This is a C++ library. It implements some generic functionality for fast startup
 	- [Networking](#configuration)
 	- [Graphics](#graphics)
 	- [Core](#core)
+    - [Logger](#logger)
 - [Third-Party Packages](#third-party-packages)
 
 # Usage
@@ -23,50 +23,38 @@ This is a C++ library. It implements some generic functionality for fast startup
 main.cpp
 ```c++
 #include "Config.h"
-
 #include "Core.h"
-
+#include "Logger.h"
 #include "Graphics.h"
-
 #include "Networking.h"
 #include "Server.h"
 #include "Client.h"
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
-
-void InitLogger() {
-    std::shared_ptr<spdlog::logger> logger = std::make_shared<spdlog::logger>("Main");
-    spdlog::set_default_logger(logger);
-
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>(); //Console printing
-    logger->sinks().push_back(console_sink);
-}
-
-int main(int argc, char* argv[]){
-    InitLogger();
+int main(int argc, char* argv[]){  
+    Logger::Initalize(Logger::L_INFO, Logger::L_CONSOLE);
     Networking::Intialize();
 
-    spdlog::info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
-
+    Logger::Info("TEMPLATE VERSION " + std::to_string(Template_VERSION_MAJOR) + "." + std::to_string(Template_VERSION_MINOR));
+    
     Graphics graphics;
     graphics.Init("Template");
 
-    Server server;
+    TestServer server;
     server.Initialize(IPEndpoint("localhost", 8000));
-    
+
     int result = 1;
     while (result) {
 
         server.Frame(); //Runs the server
         result = graphics.Render(); //return 0 when window closes
+
+        Sleep(500);
     }
 
     graphics.Shutdown();
     Networking::Shutdown();
     return 0;
 }
-
 ```
 
 # Building
@@ -85,25 +73,23 @@ cmake --build .
 ```
 
 # Configuration
-Make it your own by configuring it.
+[CMakeLists.txt](CMakeLists.txt)
+`project(YOUR_PROJECT_NAME_HERE)`
 
-CMakeLists.txt : `project(YOUR_PROJECT_NAME_HERE)`
-src/config.h.in :
-`#define YOUR_PROJECT_NAME_VERSION_MAJOR @YOUR_PROJECT_NAME_VERSION_MAJOR@` and
+[src/Config.h.in](src/Config.h.in)
+`#define YOUR_PROJECT_NAME_VERSION_MAJOR @YOUR_PROJECT_NAME_VERSION_MAJOR@`
 `#define YOUR_PROJECT_NAME_VERSION_MINOR @YOUR_PROJECT_NAME_VERSION_MINOR@`
 
 # Modules
-Several static libaries are implemented in deps/.
-
-
+/deps/...
 
 ## Networking
-IPv4 TCP server static library. The server is non-blocking and uses packets. 
-Scripts/tcp_client.py implements a simple client with packet parsing and creation. 
+- [ ] IPv6 networking
+- [ ] Non-blocking client
 
-Server::use_packets changes bevhaiour to raw read and writing. 
+Static IPv4 Winsock networking library.  
 
-- Server
+### Server
 ```cpp
 #include "Server.h"
 
@@ -113,12 +99,20 @@ while(true){
     server.Frame();
 }
 ```
-- Client
-TODO : Non blocking client
+### Client
+
 Scripts/tcp_client.py implements a simple client with string-packet parsing and creation. 
+```cpp
+#include "Client.h"
+ Client client;
+ client.Connect(IPEndpoint("localhost", 12345));
+ while (true) {
+     client.Frame();
+ }
+```
 
 ## Graphics
-Graphics is a static library utilizing OpenGL-GLFW, GLM, and ImGUI.
+Graphics is a static library utilizing GLFW, GLAD, GLM, and ImGUI.
 ```cpp
 Graphics graphics;
 graphics.Init("Template");
@@ -127,11 +121,21 @@ while(true){
 }
 ```
 
+## Logger
+Logger is a static library.  If CMake library 'SPDLOG' is found, then this is a wrapper for SPDLOG. If no SPDLOG library is found, this is a simple logging library. 
+```cpp
+#include "Logger.h"
+Logger::Initalize(L_INFO, L_CONSOLE)
+Logger::RegisterCallback([](const Logger::Log log){ std::cout << log.payload << std::endl;})
+Logger::Info("Something happend!");
+Logger::Error("An error occured...");
+```
+
 # Third-Party Packages
 
-- [Spdlog C++ Logger](https://github.com/gabime/spdlog)
+- [Spdlog Logger](https://github.com/gabime/spdlog)
 
-- [NLOHMANN C++ JSON](https://github.com/nlohmann/json)
+- [NLOHMANN JSON](https://github.com/nlohmann/json)
 
 - [GLFW](https://www.glfw.org/)
 
@@ -139,7 +143,7 @@ while(true){
 
 - [ImGui](https://github.com/ocornut/imgui)
 
-- [Eigen C++ Math](https://gitlab.com/libeigen/eigen)
+- [Eigen](https://gitlab.com/libeigen/eigen)
 
 - [GLAD](https://github.com/Dav1dde/glad)
 

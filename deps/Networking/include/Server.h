@@ -34,9 +34,13 @@ private:
 
 protected:
 	virtual int ProcessPacket(std::shared_ptr<Packet> packet);
-
 	virtual int OnConnect(std::shared_ptr<TCPConnection> connection);
 	virtual int OnDisconnect(std::shared_ptr<TCPConnection> connection, std::string reason);
+
+#pragma region Callbacks
+	int RegisterCallback();
+
+#pragma endregion
 };
 
 class TestServer : public Server {
