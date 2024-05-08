@@ -1,17 +1,15 @@
 cmake_minimum_required(VERSION 3.15)
-
 include(cmake_functions.cmake)
 
-project(Fundamentum VERSION 1.0)
+#project(Fundamentum VERSION 1.0)
+add_library(Fundamentum STATIC src/glad.c)
 
 set(${CMAKE_RUNTIME_OUTPUT_DIRECTORY} ${PROJECT_BINARY_DIR})
 set(${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ${PROJECT_BINARY_DIR})
 set(${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${PROJECT_BINARY_DIR})
 
-
 add_subdirectory(deps)
 add_subdirectory(vendor)
 add_subdirectory(src)
 
-#add_library(Fundamentum STATIC)
-#target_link_libraries(Fundamentum INTERFACE deps vendor)
+target_link_libraries(Fundamentum INTERFACE deps vendor)
